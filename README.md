@@ -1,7 +1,7 @@
 # js-email-address-validator
 Email address validator in JavaScript
 
-This is intended to provide validation as strict as possible without failing any valid email address. It was written as a fun challenge.
+This validator will tell with high accuracy whether a given string could possibly be a standard-compliant email address. This is intended to provide validation as strict as possible without failing any valid email address. It was written as a fun challenge.
 
 You likely do not need this amount of validation. Input validation will typically be very simple, such as `/.+@.+/.test(addr)` or `/.+@.+\..+/.test(addr)`. If that basic validation passes, then the address will be fully verified by sending a message to it and wait for the user to respond with some action, which is the only way to truly know whether an address is valid.
 
@@ -32,7 +32,7 @@ The rules for a valid email address are surprising complex and are scattered thr
 - An email address (in the language of RFC 2822, an addr-spec) contains a local part, followed by "@", followed by a domain part.
 - The local part and the domain part are each composed of one or more sections or labels separated by a period.
 - No label can be entirely empty, which means that two periods cannot _normally_ appear consecutively (but see below for escaped characters and quoted strings). This also means that neither the local part nor the domain part will start or end with an unescaped period.
-- An email address cannot be used if it is more than 253 characters. The commands that send and receive mail require a string of 255 characters or less, and that string includes a surrounding pair of angle brackets. This validator will reject any address longer than 253 characters.
+- An email address cannot be used if it is more than 2534 characters. The commands that send and receive mail require a string of 256 characters or less, and that string includes a surrounding pair of angle brackets. This validator will reject any address longer than 254 characters.
 - Backslash Escape: A backslash followed by another character forms a "quoted-pair". This has the effect of escaping the second character in the pair, making it legal where it otherwise would be illegal and removing any special meaning it may have. This is not allowed in all contexts.
 - Comment:
   - A label in either the local part or the domain part can start and/or end with comments.
@@ -44,7 +44,7 @@ The rules for a valid email address are surprising complex and are scattered thr
 - Local Part:
   - The local part can be up to 64 characters long.
   - Normal label: Normally, the legal characters within a label in the local part of the address include alphanumeric low-ASCII characters and the set {``!#$%&'*+-/=?^_`{|}~``}.
-  - Quoted string: An entire label (or an entire local part, but verification would not be any different) can be surrounded in double-quotes. Inside a quoted string, any printable or whitespace character is valid, with the exception of the backslash and the double-quote.
+  - Quoted string: An entire label (or an entire local part, but then the local part could be considered a single label) can be surrounded in double-quotes. Inside a quoted string, any printable or whitespace character is valid, with the exception of the backslash and the double-quote.
   - Backslash Escape: 
     - Since naked backslash and naked double-quote cannot exist within a quoted string, they can be preceded by a backslash to become a quoted-pair. _This seems to be the only fully agreed upon non-redundant use of the backslash escape in the non-comment portion of a local part._
     - According to RFC 3696, ANY character can be part of a quoted-pair, regardless of whether it must be quoted. (However, quoting/escaping a character that does not need to be quoted is redundant, is unnecessary, is needlessly verbose, and uses more characters than it needs to.)
@@ -53,8 +53,8 @@ The rules for a valid email address are surprising complex and are scattered thr
   - The domain part can be either a host name or a domain literal.
   - Domain Literal:
     - A domain literal starts and ends with square brackets.
-    - The content between the brackets should be the host's literal location on the network (typically an IP address), but nearly any character is allowed. The only disallowed unescaped characters are _TODO: get this information_.
-    - Backslash escapes are allowed.
+    - The content between the brackets should be the host's literal location on the network (typically an IP address), but nearly any character is allowed. The only disallowed unescaped characters are square brackets and backslash.
+    - Backslash escapes are allowed and can be used to insert a backslash or square bracket.
   - Host Name:
     - Each label within a host name can be up to 63 characters long.
     - The entire host name can be up to 255 characters long, but this would not result in a usable email address.
@@ -67,7 +67,7 @@ The rules for a valid email address are surprising complex and are scattered thr
 ## Known Limitations
 - Does not really handle addresses that contain non-ASCII or high-ASCII characters.
   - In the local part, any character above 0x80 (the start of the high-ASCII range) is assumed to be valid, which seems to be the recommendation.
-  - _TODO: Verify that the code actually does this_: In the domain part, any character above 0x80 is assumed to be a valid alphanumeric character. This **MAY** be correct per IDNA2003 (I haven't checked), but it is certainly **NOT** correct per IDNA2008. IDNA2008 disallows letter variants (capital, full-width/half-width), symbols, and punctuation. As long as the ASCII period (0x2E) is the only valid label/subdomain separator character (again, I haven't checked whether this is true), I don't believe any valid domains would be rejected, but invalid domains could be accepted.
+  - In the domain part, any character above 0x80 is assumed to be a valid alphanumeric character. This **MAY** be correct per IDNA2003 (I haven't checked), but it is certainly **NOT** correct per IDNA2008. IDNA2008 disallows letter variants (capital, full-width/half-width), symbols, and punctuation. As long as the ASCII period (0x2E) is the only valid label/subdomain separator character (again, I haven't checked whether this is true), I don't believe any valid domains would be rejected, but invalid domains could be accepted.
 - Only partially handles comments. Comments can contain other comments, and the inner parentheses must be properly nested. This cannot be tested with a regular expression. Only the outer parentheses are checked to make sure they match, and the contents of the comment are then ignored. The validator should never reject a valid comment, but it can accept an invalid comment that contains unmatched internal parentheses.
 - Comments are included in the overall length of the address, the length of the local part, and the length of the domain part. They are not included in the length of individual labels in the domain. This is probably not the correct handling.
 
