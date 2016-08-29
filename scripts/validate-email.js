@@ -48,8 +48,8 @@ function validateEmailAddressFormat(address) {
 
     // Each label within a domain can contain dashes, but cannot start or end with a dash.
     // This will fail international non-ASCII domains.
-    var domainLabelInternalChar = /[a-zA-Z0-9\-]/;
-    var domainLabelStartEndChar = /[a-zA-Z0-9]/;
+    var domainLabelInternalChar = /[a-zA-Z0-9\u0080-\uFFFF\-]/;
+    var domainLabelStartEndChar = /[a-zA-Z0-9\u0080-\uFFFF]/;
 
     // A label contains up to 63 characters. Either a single start/end char (for a one-character-long label), 
     // or 0-61 internal characters surrounded by
