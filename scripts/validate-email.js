@@ -12,6 +12,7 @@ function validateEmailAddressFormat(address, opts) {
     
     // Get options from opts, or specify defaults if not given
     var optUseRegexOnly = coalesce(opts.useRegexOnly, false);
+    var optAllowBareEscapes = coalesce(opts.allowBareEscapes, true);
     
     
     
@@ -105,13 +106,15 @@ function validateEmailAddressFormat(address, opts) {
     // Any character (regardless of whether it needs escaped) can be escaped by a backslash
     var escapedLocalChar = /(\\[\s\S])/;
 
-    // Non-special characters or escaped characters can be in an unquoted section. An unquoted
-    // section must be non-zero length.
-    var standardLocalSectionChar = new RegExp('(' + standardLocalChar.source + '|' + escapedLocalChar.source + ')');
+    // Non-special characters or escaped characters can be in an unquoted section (or only non-special
+    // characters if bare escapes are not allowed). An unquoted section must be non-zero length.
+    var standardLocalSectionChar = optAllowBareEscapes ?
+        new RegExp('(' + standardLocalChar.source + '|' + escapedLocalChar.source + ')') :
+        standardLocalChar;
     var standardLocalSection = new RegExp('(' + standardLocalSectionChar.source + '+)');
 
-    // A quoted section can contain characters legal in a standard section, plus anything
-    // in mustBeQuotedLocalChar. The string inside the quotes could be zero length.
+    // A quoted section can non-special characters legal in a standard section, plus anything
+    // in mustBeQuotedLocalChar, plus escaped pairs. The string inside the quotes could be zero length.
     var quotedLocalSectionChar = new RegExp('(' + standardLocalChar.source + '|' + mustBeQuotedLocalChar.source + '|' + escapedLocalChar.source + ')');
     var quotedLocalSection = new RegExp('("' + quotedLocalSectionChar.source + '*")');
 
