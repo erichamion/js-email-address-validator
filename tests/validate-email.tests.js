@@ -522,3 +522,24 @@ QUnit.test('validateEmailAddressFormat_CommentsMisplaced_ShouldReject', function
         assert.notOk(result.result, '"' + result.address + '" has invalid comments and should fail');
     })
 });
+
+QUnit.test('validateEmailAddressFormat_CommentsBadNesting_ShouldReject', function (assert) {
+    // Arrange
+    var addresses = [
+        '(comment (inner comment)abc@abc.def',  
+        'me@(inner comment) comment)after',
+        'me(comment.has(nested inner comment).and starts.before@and.has.another(nested inner).but.ends.after.the.at)def.com',
+        ];
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.address + '" has invalid comments and should fail');
+    })
+});
