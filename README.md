@@ -20,9 +20,10 @@ validateEmailAddress(address[, options])
   
   Option | Default | Effect
   ------ | ------- | ------
-  **`useRegexOnly`** | **false** | If true, don't do any validation that can't be accomplished using only regular expression matching. In particular, nested comments cannot be properly validated with regular expressions.
-  **`allowBareEscapes`** | **true** | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
-  **`allowComments`** | **true** | Allow comments in an address if true, disallow if false.
+  **useRegexOnly** | **false** | If true, don't do any validation that can't be accomplished using only regular expression matching. In particular, nested comments cannot be properly validated with regular expressions.
+  **allowBareEscapes** | **true** | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
+  **allowComments** | **true** | Allow comments in an address if true, disallow if false.
+  **allowLocalAddresses** | **0** | If 0, every address must have a local part, an "@", and a domain part. If positive, then addresses with only a local part (no "@" and no domain part) are allowed in addition to full addresses. If negative, then _only_ addresses with only a local part are allowed, and full addresses are not allowed. The comparisons are not strict, so anything that compares like 0 or false will be considered 0, and true will be considered positive.
 
 ```
 var addr = 'myaddress@example.com';
@@ -42,7 +43,7 @@ if (validateEmailAddress(addr, { useRegexOnly:true })) {
 
 
 ## Rules
-The rules for a valid email address are surprising complex and are scattered through multiple RFCs. I consulted several sources for the rules and their interpretations.
+The rules for a valid email address are surprisingly complex and are scattered through multiple RFCs. I consulted several sources for the rules and their interpretations.
 
 ### Sources
 - [RFC 3696, Application Techniques for Checking and Transformation of Names](https://tools.ietf.org/html/rfc3696)
@@ -55,7 +56,7 @@ The rules for a valid email address are surprising complex and are scattered thr
 - [Internationalized Domain Names (IDN) FAQ](http://unicode.org/faq/idn.html)
 
 ### Rules followed
-- An email address (in the language of RFC 2822, an addr-spec) contains a local part, followed by "@", followed by a domain part.
+- An email address (in the language of RFC 2822, an addr-spec) contains a local part, followed by "@", followed by a domain part. (This behavior can be modified to either allow or require addresses with _only_ a local part using the allowLocalAddresses option)
 - The local part and the domain part are each composed of one or more sections or labels separated by a period.
 - No label can be entirely empty, which means that two periods cannot _normally_ appear consecutively (but see below for escaped characters and quoted strings). This also means that neither the local part nor the domain part will start or end with an unescaped period.
 - An email address cannot be used if it is more than 254 characters. Longer addresses can exist, but the commands that send and receive mail require a string of 256 characters or less, and that string includes a surrounding pair of angle brackets that takes up two of the 256 characters. This validator will reject any address longer than 254 characters because it cannot be used.
@@ -105,6 +106,5 @@ The rules for a valid email address are surprising complex and are scattered thr
 - Add additional options. Future options may include:
   - options for handling (or not handling) internationalized addresses with high-ASCII or non-ASCII characters
   - whether to validate an address or return a regex (or array of regexes if needed). Since the final regex is built up from multiple parts, saving the regex could be more efficient than calling validateEmailAddress() multiple times when checking multiple addresses
-  - whether to allow local addresses that have no domain part
   - whether to allow addresses that meet the specification's length requirements but are too long to be used
   - whether to disallow certain things that are legal but discouraged (such as domain literals)
