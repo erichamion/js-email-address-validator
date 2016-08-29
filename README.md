@@ -13,17 +13,15 @@ validateEmailAddress(address[, options])
 
 ### Parameters
 **address**
-  
-    The string to check for validity.
+  The string to check for validity.
   
 **options**
+  Optional. An object which contains options that affect the validation performed. If an object is supplied and any options are missing, the missing options will be given default values. If nothing is supplied, then all options will be given default values.
   
-    Optional. An object which contains options that affect the validation performed. If an object is supplied and any options are missing, the missing options will be given default values. If nothing is supplied, then all options will be given default values.
-  
-    Option | Default | Effect
-    ------ | ------- | ------
-    useRegexOnly | false | If true, don't do any validation that can't be accomplished using only regular expression matching. In particular, nested comments cannot be properly validated with regular expressions.
-    allowBareEscapes | true | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
+  Option | Default | Effect
+  ------ | ------- | ------
+  useRegexOnly | false | If true, don't do any validation that can't be accomplished using only regular expression matching. In particular, nested comments cannot be properly validated with regular expressions.
+  allowBareEscapes | true | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
 
 ```
 var addr = 'myaddress@example.com';
