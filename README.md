@@ -32,7 +32,7 @@ The rules for a valid email address are surprising complex and are scattered thr
 - An email address (in the language of RFC 2822, an addr-spec) contains a local part, followed by "@", followed by a domain part.
 - The local part and the domain part are each composed of one or more sections or labels separated by a period.
 - No label can be entirely empty, which means that two periods cannot _normally_ appear consecutively (but see below for escaped characters and quoted strings). This also means that neither the local part nor the domain part will start or end with an unescaped period.
-- An email address cannot be used if it is more than 2534 characters. The commands that send and receive mail require a string of 256 characters or less, and that string includes a surrounding pair of angle brackets. This validator will reject any address longer than 254 characters.
+- An email address cannot be used if it is more than 254 characters. Longer addresses can exist, but the commands that send and receive mail require a string of 256 characters or less, and that string includes a surrounding pair of angle brackets that takes up two of the 256 characters. This validator will reject any address longer than 254 characters because it cannot be used.
 - Backslash Escape: A backslash followed by another character forms a "quoted-pair". This has the effect of escaping the second character in the pair, making it legal where it otherwise would be illegal and removing any special meaning it may have. This is not allowed in all contexts.
 - Comment:
   - A label in either the local part or the domain part can start and/or end with comments.
