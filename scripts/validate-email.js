@@ -13,10 +13,11 @@ function validateEmailAddressFormat(address, opts) {
     // Get options from opts, or specify defaults if not given
     var optUseRegexOnly = coalesce(opts.useRegexOnly, false);
     var optAllowBareEscapes = coalesce(opts.allowBareEscapes, true);
+    var optAllowComments = coalesce(opts.allowComments, true);
     
     
     
-    if (!optUseRegexOnly) {
+    if (optAllowComments && !optUseRegexOnly) {
         checkComments = function() {
             // Strip escaped characters. As far as we're concerned here, any quoted-pair
             // may as well not exist. This will avoid false matches for parentheses within or
@@ -127,8 +128,10 @@ function validateEmailAddressFormat(address, opts) {
     // Any section can be either unquoted (referred to here as standard) or quoted.
     var localSection = new RegExp('(' + standardLocalSection.source + '|' + quotedLocalSection.source + ')');
 
-    //  A section may start and/or end with zero or more comments.
-    var commentedLocalSection = new RegExp('(' + comment.source + '*' + localSection.source + comment.source + '*)');
+    //  A section may start and/or end with zero or more comments, as long as comments are allowed.
+    var commentedLocalSection = optAllowComments ?
+        new RegExp('(' + comment.source + '*' + localSection.source + comment.source + '*)') :
+        localSection;
 
     // Local part can have any number of localSections (optionally with comments), each separated by a single . character.
     var localPart = new RegExp(commentedLocalSection.source + String.raw`(\.` + commentedLocalSection.source + ')*');
@@ -145,8 +148,10 @@ function validateEmailAddressFormat(address, opts) {
     // (zero or more internal characters followed by another start/end character).
     var domainLabel = new RegExp('(' + domainLabelStartEndChar.source + '(' + domainLabelInternalChar.source + '{0,61}' + domainLabelStartEndChar.source + ')?)');
 
-    // Like the local part, domain labels can have comments.
-    var commentedDomainLabel = new RegExp('(' + comment.source + '*' + domainLabel.source + comment.source + '*)');
+    // Like the local part, domain labels can have comments if the options don't disallow comments.
+    var commentedDomainLabel = optAllowComments ?
+        new RegExp('(' + comment.source + '*' + domainLabel.source + comment.source + '*)') : 
+        domainLabel;
 
     // Domain has ONE or more labels, separated by . chars. (A top-level domain, which has no dots because it
     // is only a single label, is legal).
@@ -160,7 +165,9 @@ function validateEmailAddressFormat(address, opts) {
     var bracketedDomainSimpleChar = /[^[\]\\]/;
     var bracketedDomainChar = new RegExp('(' + bracketedDomainSimpleChar.source + '|' + escapedLocalChar.source + ')');
     var bracketedDomainPart = new RegExp(String.raw`(\[` + bracketedDomainChar.source + String.raw`*\])`);
-    var commentedBracketedDomain = new RegExp('(' + comment.source + '*' + bracketedDomainPart.source + comment.source + '*)')
+    var commentedBracketedDomain = optAllowComments ? 
+        new RegExp('(' + comment.source + '*' + bracketedDomainPart.source + comment.source + '*)') :
+        bracketedDomainPart;
 
     var domainPart = new RegExp('(' + normalDomainPart.source + '|' + commentedBracketedDomain.source + ')');
 
