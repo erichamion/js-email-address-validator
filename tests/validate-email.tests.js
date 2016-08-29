@@ -671,3 +671,123 @@ QUnit.test('validateEmailAddressFormat_CommentsDisallowed_ShouldReject', functio
         assert.notOk(result.result, '"' + result.address + '" has comments, but options disallow comments, and should fail');
     })
 });
+
+QUnit.test('validateEmailAddressFormat_FullAddressWithLocalExplicitlyDisallowed_ShouldAccept', function (assert) {
+    // Arrange
+    var addresses = [
+        'abc@def.com'
+        ];
+    var options = { allowLocalAddresses: 0 };
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.address + '" is a non-local address with local addresses disallowed and should pass');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_LocalAddressWithLocalExplicitlyDisallowed_ShouldReject', function (assert) {
+    // Arrange
+    var addresses = [
+        'abc.def'
+        ];
+    var options = { allowLocalAddresses: 0 };
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.address + '" is a local address with local addresses disallowed and should fail');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_FullAddressWithLocalAllowed_ShouldAccept', function (assert) {
+    // Arrange
+    var addresses = [
+        'abc@def.com'
+        ];
+    var options = { allowLocalAddresses: 1 };
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.address + '" is a non-local address with local addresses allowed and should pass');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_LocalAddressWithLocalAllowed_ShouldAccept', function (assert) {
+    // Arrange
+    var addresses = [
+        'abc.def'
+        ];
+    var options = { allowLocalAddresses: 1 };
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.address + '" is a local address with local addresses allowed and should pass');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_FullAddressWithLocalRequired_ShouldReject', function (assert) {
+    // Arrange
+    var addresses = [
+        'abc@def.com'
+        ];
+    var options = { allowLocalAddresses: -1 };
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.address + '" is a non-local address with local addresses required and should fail');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_LocalAddressWithLocalRequired_ShouldAccept', function (assert) {
+    // Arrange
+    var addresses = [
+        'abc.def'
+        ];
+    var options = { allowLocalAddresses: -1 };
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.address + '" is a local address with local addresses required and should pass');
+    })
+});
