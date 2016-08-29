@@ -3,7 +3,7 @@ function validateEmailAddressFormat(address) {
     // is no longer than 254 characters (addresses can exist with up to 255 characters in the domain
     // part, total length up to 320 characters, but they can't be used for sending or receiving mail.
     if (address.length > 254) return false;
-    if (!(/.{1,64}@.+/.test(address))) return false;
+    if (!(/^.{1,64}@.+$/.test(address))) return false;
 
     // These characters can appear without being escaped or quoted. Don't include the . here, 
     // because it's special (can't be first, last, or consecutive) and handled elsewhere.
