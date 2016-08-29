@@ -14,11 +14,12 @@ function validateEmailAddressFormat(address, opts) {
     var optUseRegexOnly = coalesce(opts.useRegexOnly, false);
     var optAllowBareEscapes = coalesce(opts.allowBareEscapes, true);
     var optAllowComments = coalesce(opts.allowComments, true);
+    var optAllowLocalAddresses = coalesce(opts.allowLocalAddresses, 0); // non-zero = allowed. negative = required. 
     
     
     
     if (optAllowComments && !optUseRegexOnly) {
-        checkComments = function() {
+        checkComments = function(requireAt) {
             // Strip escaped characters. As far as we're concerned here, any quoted-pair
             // may as well not exist. This will avoid false matches for parentheses within or
             // surrounding comments, as well as for double-quotes outside of comments.
@@ -81,7 +82,7 @@ function validateEmailAddressFormat(address, opts) {
             // If parentheses are properly nested, we'll end up with 0 commentLevel. In addition,
             // if each side of the @ sign has separate properly nested parentheses (or no parentheses), 
             // we will have seen a naked @ symbol outside of any comments.
-            return commentLevel == 0 && hasNakedAt;
+            return commentLevel == 0 && (hasNakedAt || !requireAt);
         };
     }
     
@@ -89,8 +90,24 @@ function validateEmailAddressFormat(address, opts) {
     // First test: Local part is 1-64 characters, domain part is at least one character, and total
     // is no longer than 254 characters (addresses can exist with up to 255 characters in the domain
     // part, total length up to 320 characters, but they can't be used for sending or receiving mail.
-    if (address.length > 254) return false;
-    if (!(/^[\s\S]{1,64}@[\s\S]+$/.test(address))) return false;
+    if (!optAllowLocalAddresses) {
+        // Must have local and domain part. Check total length and local length (no need to check
+        // domain length because the total length requirement is more strict than the domain length
+        // requirement)
+        if (address.length > 254) return false;
+        if (!(/^[\s\S]{1,64}@[\s\S]+$/.test(address))) return false;
+    } else if (optAllowLocalAddresses > 0) {
+        // May have local and domain part. Check total length
+        if (address.length > 254) return false;
+        
+        // If there is an @ separating the local and domain parts, it must be no later than 
+        // the 65th character. If there is not an @, then the entire string must be 1-64 characters
+        // long.
+        if (!(/^[\s\S]{1,64}(@[\s\S]+)?$/.test(address))) return false;
+    } else {
+        // No domain part. Must be no more than 64 characters total.
+        if (address.length > 64) return false;
+    }
 
     // These characters can appear without being escaped or quoted. Don't include the . here, 
     // because it's special (can't be first, last, or consecutive) and handled elsewhere.
@@ -171,9 +188,16 @@ function validateEmailAddressFormat(address, opts) {
 
     var domainPart = new RegExp('(' + normalDomainPart.source + '|' + commentedBracketedDomain.source + ')');
 
-    var fullAddress = new RegExp('^' + localPart.source + '@' + domainPart.source + '$');
+    var fullAddress;
+    if (!optAllowLocalAddresses) {
+        fullAddress = new RegExp('^' + localPart.source + '@' + domainPart.source + '$');
+    } else if (optAllowLocalAddresses > 0) {
+        fullAddress = new RegExp('^' + localPart.source + '(@' + domainPart.source + ')?$');
+    } else {
+        fullAddress = new RegExp('^' + localPart.source + '$');
+    }
 
     var regexResult = fullAddress.test(address);
-    var fullResult = regexResult && (checkComments ? checkComments() : true);
+    var fullResult = regexResult && (checkComments ? checkComments(!optAllowLocalAddresses) : true);
     return fullResult;
 }
