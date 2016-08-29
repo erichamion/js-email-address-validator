@@ -5,21 +5,25 @@ This validator will tell with high accuracy whether a given string could possibl
 
 You likely do not need this amount of validation. Input validation will typically be very simple, such as `/.+@.+/.test(addr)` or `/.+@.+\..+/.test(addr)`. If that basic validation passes, then the address will be fully verified by sending a message to it and wait for the user to respond with some action, which is the only way to truly know whether an address is valid.
 
+
 ## Syntax
 ```
 validateEmailAddress(address[, options])
 ```
+
 ### Parameters
 **address**
-  The string to check for validity.
+  
+    The string to check for validity.
   
 **options**
-  Optional. An object which contains options that affect the validation performed. If an object is supplied and any options are missing, the missing options will be given default values. If nothing is supplied, then all options will be given default values.
   
-  Option | Default | Effect
-  ------ | ------- | ------
-  useRegexOnly | false | If true, don't do any validation that can't be accomplished using only regular expression matching. In particular, nested comments cannot be properly validated with regular expressions.
-  allowBareEscapes | true | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
+    Optional. An object which contains options that affect the validation performed. If an object is supplied and any options are missing, the missing options will be given default values. If nothing is supplied, then all options will be given default values.
+  
+    Option | Default | Effect
+    ------ | ------- | ------
+    useRegexOnly | false | If true, don't do any validation that can't be accomplished using only regular expression matching. In particular, nested comments cannot be properly validated with regular expressions.
+    allowBareEscapes | true | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
 
 ```
 var addr = 'myaddress@example.com';
@@ -36,6 +40,8 @@ if (validateEmailAddress(addr, { useRegexOnly:true })) {
   alert('Try again, dummy!');
 }
 ```
+
+
 ## Rules
 The rules for a valid email address are surprising complex and are scattered through multiple RFCs. I consulted several sources for the rules and their interpretations.
 
