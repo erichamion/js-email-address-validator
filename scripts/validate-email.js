@@ -3,7 +3,7 @@ function validateEmailAddressFormat(address) {
     // is no longer than 254 characters (addresses can exist with up to 255 characters in the domain
     // part, total length up to 320 characters, but they can't be used for sending or receiving mail.
     if (address.length > 254) return false;
-    if (!(/^[\s\S]{1,64}@.+$/.test(address))) return false;
+    if (!(/^[\s\S]{1,64}@[\s\S]+$/.test(address))) return false;
 
     // These characters can appear without being escaped or quoted. Don't include the . here, 
     // because it's special (can't be first, last, or consecutive) and handled elsewhere.
@@ -34,7 +34,7 @@ function validateEmailAddressFormat(address) {
     // All we're checking is whether there is an outer pair that matches. This should not fail any valid
     // address, but it could pass an invalid address with improperly nested parentheses. We would
     // need to do more than regex checking to fully test comments.
-    var comment = /(\(.*\))/;
+    var comment = /(\([\s\S]*\))/;
 
     // Any section can be either unquoted (referred to here as standard) or quoted.
     var localSection = new RegExp('(' + standardLocalSection.source + '|' + quotedLocalSection.source + ')');
