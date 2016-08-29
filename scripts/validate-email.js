@@ -3,7 +3,7 @@ function validateEmailAddressFormat(address) {
     // is no longer than 254 characters (addresses can exist with up to 255 characters in the domain
     // part, total length up to 320 characters, but they can't be used for sending or receiving mail.
     if (address.length > 254) return false;
-    if (!(/^.{1,64}@.+$/.test(address))) return false;
+    if (!(/^[\s\S]{1,64}@.+$/.test(address))) return false;
 
     // These characters can appear without being escaped or quoted. Don't include the . here, 
     // because it's special (can't be first, last, or consecutive) and handled elsewhere.
@@ -15,7 +15,7 @@ function validateEmailAddressFormat(address) {
     var mustBeEscapedLocalChar = new RegExp('[' + mustBeEscapedLocalCharSet + ']');
 
     // Anything that isn't standard or in mustBeEscaped can be escaped or quoted.
-    var mustBeQuotedLocalChar = new RegExp('[^' + standardLocalCharSet + mustBeEscapedLocalCharSet + ']');
+    var mustBeQuotedLocalChar = new RegExp('[^' + standardLocalCharSet + mustBeEscapedLocalCharSet + String.raw`]`);
 
     // Any character (regardless of whether it needs escaped) can be escaped by a backslash
     var escapedLocalChar = /(\\.)/;
@@ -37,7 +37,7 @@ function validateEmailAddressFormat(address) {
     var comment = /(\(.*\))/;
 
     // Any section can be either unquoted (referred to here as standard) or quoted.
-    var localSection = new RegExp('(' + standardLocalSection.source + '|' + quotedLocalSection + ')');
+    var localSection = new RegExp('(' + standardLocalSection.source + '|' + quotedLocalSection.source + ')');
 
     //  A section may start and/or end with zero or more comments.
     var commentedLocalSection = new RegExp('(' + comment.source + '*' + localSection.source + comment.source + '*)');
