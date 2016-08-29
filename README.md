@@ -19,6 +19,7 @@ validateEmailAddress(address[, options])
   Option | Default | Effect
   ------ | ------- | ------
   useRegexOnly | false | If true, don't do any validation that can't be accomplished using only regular expression matching. In particular, nested comments cannot be properly validated with regular expressions.
+  allowBareEscapes | true | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
 
 ```
 var addr = 'myaddress@example.com';
@@ -68,7 +69,7 @@ The rules for a valid email address are surprising complex and are scattered thr
   - Backslash Escape: 
     - Since naked backslash and naked double-quote cannot exist within a quoted string, they can be preceded by a backslash to become a quoted-pair. _This seems to be the only fully agreed upon non-redundant use of the backslash escape in the non-comment portion of a local part._
     - According to RFC 3696, ANY character can be part of a quoted-pair, regardless of whether it must be quoted. (However, quoting/escaping a character that does not need to be quoted is redundant, is unnecessary, is needlessly verbose, and uses more characters than it needs to.)
-    - According to RFC 3696,a quoted-pair may occur either within a quoted string or in a normal unquoted label. **Many sources disagree with this interpretation, stating that a quoted-pair MUST be within a quoted string.** This validator follows the rule as given in RFC 3696, allowing backslash escapes anywhere in the local part.
+    - According to RFC 3696,a quoted-pair may occur either within a quoted string or in a normal unquoted label. **Many sources disagree with this interpretation, stating that a quoted-pair MUST be within a quoted string.** By default, this validator follows the rule as given in RFC 3696, allowing backslash escapes anywhere in the local part. This behavior can be changed with the `allowBareEscapes` option.
 - Domain Part:
   - The domain part can be either a host name or a domain literal.
   - Domain Literal:
@@ -94,10 +95,8 @@ The rules for a valid email address are surprising complex and are scattered thr
 
 ## Future Plans
 - Review the RFCs to make sure whitespace and control characters are being handled properly.
-- Add an options parameter. Options may include:
-  - whether to allow backslash escapes outside of a quoted string
+- Add additional options. Future options may include:
   - whether to allow comments
-  - whether to fully validate comments or only use regex checking
   - whether to validate an address or return a regex (or array of regexes if needed). Since the final regex is built up from multiple parts, saving the regex could be more efficient than calling validateEmailAddress() multiple times when checking multiple addresses
   - whether to allow local addresses that have no domain part
   - whether to allow addresses that meet the specification's length requirements but are too long to be used
