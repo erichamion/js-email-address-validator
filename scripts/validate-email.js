@@ -1,4 +1,89 @@
-function validateEmailAddressFormat(address) {
+function validateEmailAddressFormat(address, opts) {
+    function coalesce(val, def) {
+        // Coalesce to default on null or undefined, but not on false/falsey values.
+        if (val === undefined || val === null) return def;
+        return val;
+    }
+    
+    var checkComments;
+    
+    // Prevent null reference errors
+    opts = opts || {};
+    
+    // Get options from opts, or specify defaults if not given
+    var optUseRegexOnly = coalesce(opts.useRegexOnly, false);
+    
+    
+    
+    if (!optUseRegexOnly) {
+        checkComments = function() {
+            // Strip escaped characters. As far as we're concerned here, any quoted-pair
+            // may as well not exist. This will avoid false matches for parentheses within or
+            // surrounding comments, as well as for double-quotes outside of comments.
+            var strippedAddress = address.replace(/\\[\s\S]/g, '');
+            
+            var isInQuotedString = false;
+            var isInDomainLiteral = false;
+            var hasNakedAt = false;
+            var commentLevel = 0;
+            
+            for (var i = 0; i < strippedAddress.length; i++) {
+                var ch = strippedAddress[i];
+                
+                if (isInQuotedString) {
+                    // While in a quoted string, the only thing we do is check
+                    // for the end of the quoted string (double-quote).
+                    isInQuotedString = ch !== '"';
+                    continue;
+                }
+                if (isInDomainLiteral) {
+                    // Similar to above. While in a domain literal, just check
+                    // for the end of the domain literal (closing square bracket)
+                    // and do nothing else.
+                    isInDomainLiteral = ch !== ']';
+                    continue;
+                }
+                
+                if (commentLevel === 0) {
+                    // Outside any comment (unless the current character starts a comment,
+                    // which we'll deal with below). This is the only place that a quoted
+                    // string or domain literal could start, and it's the only place we could
+                    // see a naked @ symbol.
+                    if (ch === '@') {
+                        hasNakedAt = true;
+                        continue;
+                    }
+                    if (!hasNakedAt && ch === '"') { // Quoted string can only occur in the local part, before the @
+                        // Start of a quoted string
+                        isInQuotedString = true;
+                        continue;
+                    }
+                    if (hasNakedAt && ch === '[') { // Domain literal can only occur in the domain part, after the @
+                        // Start of a domain literal
+                        isInDomainLiteral = true;
+                        continue;
+                    }
+                }
+                
+                // Check for parentheses that increment or decrement the comment level.
+                if (ch === '(') {
+                    commentLevel += 1;
+                } else if (ch === ')') {
+                    commentLevel -= 1;
+                }
+                
+                // Properly nested parentheses will NEVER give a negative commentLevel.
+                if (commentLevel < 0) return false;
+            }
+            
+            // If parentheses are properly nested, we'll end up with 0 commentLevel. In addition,
+            // if each side of the @ sign has separate properly nested parentheses (or no parentheses), 
+            // we will have seen a naked @ symbol outside of any comments.
+            return commentLevel == 0 && hasNakedAt;
+        };
+    }
+    
+    
     // First test: Local part is 1-64 characters, domain part is at least one character, and total
     // is no longer than 254 characters (addresses can exist with up to 255 characters in the domain
     // part, total length up to 320 characters, but they can't be used for sending or receiving mail.
@@ -72,10 +157,13 @@ function validateEmailAddressFormat(address) {
     var bracketedDomainSimpleChar = /[^[\]\\]/;
     var bracketedDomainChar = new RegExp('(' + bracketedDomainSimpleChar.source + '|' + escapedLocalChar.source + ')');
     var bracketedDomainPart = new RegExp(String.raw`(\[` + bracketedDomainChar.source + String.raw`*\])`);
+    var commentedBracketedDomain = new RegExp('(' + comment.source + '*' + bracketedDomainPart.source + comment.source + '*)')
 
-    var domainPart = new RegExp('(' + normalDomainPart.source + '|' + bracketedDomainPart.source + ')');
+    var domainPart = new RegExp('(' + normalDomainPart.source + '|' + commentedBracketedDomain.source + ')');
 
     var fullAddress = new RegExp('^' + localPart.source + '@' + domainPart.source + '$');
 
-    return fullAddress.test(address);
+    var regexResult = fullAddress.test(address);
+    var fullResult = regexResult && (checkComments ? checkComments() : true);
+    return fullResult;
 }
