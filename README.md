@@ -5,11 +5,31 @@ This validator will tell with high accuracy whether a given string could possibl
 
 You likely do not need this amount of validation. Input validation will typically be very simple, such as `/.+@.+/.test(addr)` or `/.+@.+\..+/.test(addr)`. If that basic validation passes, then the address will be fully verified by sending a message to it and wait for the user to respond with some action, which is the only way to truly know whether an address is valid.
 
-## Usage
-Usage is simple. Call `validateEmailAddress()` with a single string argument. It will return true if the address appears valid, or false otherwise.
+## Syntax
+```
+validateEmailAddress(address[, options])
+```
+### Parameters
+**address**
+  The string to check for validity.
+  
+**options**
+  Optional. An object which contains options that affect the validation performed. If an object is supplied and any options are missing, the missing options will be given default values. If nothing is supplied, then all options will be given default values.
+  
+  Option | Default | Effect
+  ------ | ------- | ------
+  useRegexOnly | false | If true, don't do any validation that can't be accomplished using only regular expression matching. In particular, nested comments cannot be properly validated with regular expressions.
+
 ```
 var addr = 'myaddress@example.com';
+
 if (validateEmailAddress(addr)) {
+  alert('Looks good!');
+} else {
+  alert('Try again, dummy!');
+}
+
+if (validateEmailAddress(addr, { useRegexOnly:true })) {
   alert('Looks good!');
 } else {
   alert('Try again, dummy!');
@@ -39,7 +59,7 @@ The rules for a valid email address are surprising complex and are scattered thr
   - According to the validator at isemail.info, multiple comments can appear in succession. (I need to review the RFCs to see whether this is correct, but I've allowed this)
   - A comment is surrounded by parentheses.
   - Valid unescaped characters in a comment are whitespace and any printing character, except for backslash and parentheses (but see the next point).
-  - A comment can contain nested comments, each surrounded by parentheses. The parentheses must properly nest and match (although the validator doesn't currently test for this).
+  - A comment can contain nested comments, each surrounded by parentheses. The parentheses must properly nest and match. **Note:** If the option `useRegexOnly` is true, this cannot be properly validated. In this case, valid comments will be accepted correctly, but some invalid comments will also be accepted.
   - Backslash escapes are allowed inside a comment, and this can be used to insert a parenthesis or backslash.
 - Local Part:
   - The local part can be up to 64 characters long.
@@ -55,6 +75,7 @@ The rules for a valid email address are surprising complex and are scattered thr
     - A domain literal starts and ends with square brackets.
     - The content between the brackets should be the host's literal location on the network (typically an IP address), but nearly any character is allowed. The only disallowed unescaped characters are square brackets and backslash.
     - Backslash escapes are allowed and can be used to insert a backslash or square bracket.
+    - According to the validator at isemail.info, a domain literal can be preceded or followed by comments. (I need to review the RFCs to see whether this is accurate, but I fully expect it is accurate)
   - Host Name:
     - Each label within a host name can be up to 63 characters long.
     - The entire host name can be up to 255 characters long, but this would not result in a usable email address.
@@ -68,12 +89,10 @@ The rules for a valid email address are surprising complex and are scattered thr
 - Does not really handle addresses that contain non-ASCII or high-ASCII characters.
   - In the local part, any character above 0x80 (the start of the high-ASCII range) is assumed to be valid, which seems to be the recommendation.
   - In the domain part, any character above 0x80 is assumed to be a valid alphanumeric character. This **MAY** be correct per IDNA2003 (I haven't checked), but it is certainly **NOT** correct per IDNA2008. IDNA2008 disallows letter variants (capital, full-width/half-width), symbols, and punctuation. As long as the ASCII period (0x2E) is the only valid label/subdomain separator character (again, I haven't checked whether this is true), I don't believe any valid domains would be rejected, but invalid domains could be accepted.
-- Only partially handles comments. Comments can contain other comments, and the inner parentheses must be properly nested. This cannot be tested with a regular expression. Only the outer parentheses are checked to make sure they match, and the contents of the comment are then ignored. The validator should never reject a valid comment, but it can accept an invalid comment that contains unmatched internal parentheses.
 - Comments are included in the overall length of the address, the length of the local part, and the length of the domain part. They are not included in the length of individual labels in the domain. This is probably not the correct handling.
 
 
 ## Future Plans
-- Properly validate comments.
 - Review the RFCs to make sure whitespace and control characters are being handled properly.
 - Add an options parameter. Options may include:
   - whether to allow backslash escapes outside of a quoted string
