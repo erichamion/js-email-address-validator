@@ -20,8 +20,9 @@ validateEmailAddress(address[, options])
   
   Option | Default | Effect
   ------ | ------- | ------
-  useRegexOnly | false | If true, don't do any validation that can't be accomplished using only regular expression matching. In particular, nested comments cannot be properly validated with regular expressions.
-  allowBareEscapes | true | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
+  **`useRegexOnly`** | **false** | If true, don't do any validation that can't be accomplished using only regular expression matching. In particular, nested comments cannot be properly validated with regular expressions.
+  **`allowBareEscapes`** | **true** | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
+  **`allowComments`** | **true** | Allow comments in an address if true, disallow if false.
 
 ```
 var addr = 'myaddress@example.com';
@@ -66,6 +67,7 @@ The rules for a valid email address are surprising complex and are scattered thr
   - Valid unescaped characters in a comment are whitespace and any printing character, except for backslash and parentheses (but see the next point).
   - A comment can contain nested comments, each surrounded by parentheses. The parentheses must properly nest and match. **Note:** If the option `useRegexOnly` is true, this cannot be properly validated. In this case, valid comments will be accepted correctly, but some invalid comments will also be accepted.
   - Backslash escapes are allowed inside a comment, and this can be used to insert a parenthesis or backslash.
+  - By default, this validator accepts addresses with comments. This behavior can be changed with the `allowComments` option.
 - Local Part:
   - The local part can be up to 64 characters long.
   - Normal label: Normally, the legal characters within a label in the local part of the address include alphanumeric low-ASCII characters and the set {``!#$%&'*+-/=?^_`{|}~``}.
@@ -99,8 +101,9 @@ The rules for a valid email address are surprising complex and are scattered thr
 
 ## Future Plans
 - Review the RFCs to make sure whitespace and control characters are being handled properly.
+- Review how high-ASCII and non-ASCII characters should be treated.
 - Add additional options. Future options may include:
-  - whether to allow comments
+  - options for handling (or not handling) internationalized addresses with high-ASCII or non-ASCII characters
   - whether to validate an address or return a regex (or array of regexes if needed). Since the final regex is built up from multiple parts, saving the regex could be more efficient than calling validateEmailAddress() multiple times when checking multiple addresses
   - whether to allow local addresses that have no domain part
   - whether to allow addresses that meet the specification's length requirements but are too long to be used
