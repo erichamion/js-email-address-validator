@@ -1,4 +1,4 @@
-QUnit.module('validateEmailAddress');
+QUnit.module('validateEmailAddress_Default');
 
 
 QUnit.test('validateEmailAddressFormat_EmptyAddress_ShouldReject', function (assert) {
@@ -544,6 +544,13 @@ QUnit.test('validateEmailAddressFormat_CommentsBadNesting_ShouldReject', functio
     })
 });
 
+
+
+
+
+QUnit.module('validateEmailAddress_WithOptions');
+
+
 QUnit.test('validateEmailAddressFormat_LocalDisallowedEscapedSymbols_ShouldReject', function (assert) {
 
     // Arrange
@@ -605,7 +612,7 @@ QUnit.test('validateEmailAddressFormat_LocalHasQuotedEscapesWhenBareEscapesDisal
         '"abc\\."@example.com',           // trailing dot
         '"\\a\\b\\c\\!#\\$%\\&\'*\\+-\\/=\\?^\\_`{\\|}~"@example.com' // Unnecessarily escaped characters
         ];
-    var options = { allowBareEscapes:false };
+    var options = { allowBareEscapes: false };
     var results = [];
 
     // Act
@@ -617,5 +624,50 @@ QUnit.test('validateEmailAddressFormat_LocalHasQuotedEscapesWhenBareEscapesDisal
     assert.expect(addresses.length);
     results.forEach(function(result) {
         assert.ok(result.result, '"' + result.address + '" has escaped symbols within a quoted string and should pass');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_DisallowCommentsAndDoesNotHaveComments_ShouldAccept', function (assert) {
+    // Arrange
+    var addresses = [
+        'me@example.com',  
+        'me@[127.0.0.1]',
+        '"quoted string"@example.com',
+        ];
+    var options = { allowComments: false };
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.address + '" is valid and should pass');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_CommentsDisallowed_ShouldReject', function (assert) {
+    // Arrange
+    var addresses = [
+        '(comment)(comment)me(comment comment comment)@(comment)abc(comment)(comment)(comment).(comment)def(comment)',  
+        '(comment (nested comment ("third level"!) (another @third level)))me@abc.com',
+        'me@abc(comment with a \nnewline).def',
+        '()me@abc().def'
+        ];
+    var options = { allowComments: false };
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.address + '" has comments, but options disallow comments, and should fail');
     })
 });
