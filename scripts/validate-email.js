@@ -112,92 +112,93 @@ function validateEmailAddressFormat(address, opts) {
     // These characters can appear without being escaped or quoted. Don't include the . here, 
     // because it's special (can't be first, last, or consecutive) and handled elsewhere.
     var standardLocalCharSet = String.raw`\`\-a-zA-Z0-9!#$%&'*+/=?^_{|}~\u0080-\uFFFF`;
-    var standardLocalChar = new RegExp('[' + standardLocalCharSet + ']');
+    var standardLocalChar = '[' + standardLocalCharSet + ']';
 
     // These must be escaped even when inside quotes
     var mustBeEscapedLocalCharSet = String.raw`"\\`;
-    var mustBeEscapedLocalChar = new RegExp('[' + mustBeEscapedLocalCharSet + ']');
 
     // Anything that isn't standard or in mustBeEscaped can be escaped or quoted.
-    var mustBeQuotedLocalChar = new RegExp('[^' + standardLocalCharSet + mustBeEscapedLocalCharSet + String.raw`]`);
+    var mustBeQuotedLocalChar = '[^' + standardLocalCharSet + mustBeEscapedLocalCharSet + ']';
 
     // Any character (regardless of whether it needs escaped) can be escaped by a backslash
-    var escapedLocalChar = /(\\[\s\S])/;
+    var escapedChar = String.raw`(\\[\s\S])`;
 
     // Non-special characters or escaped characters can be in an unquoted section (or only non-special
     // characters if bare escapes are not allowed). An unquoted section must be non-zero length.
     var standardLocalSectionChar = optAllowBareEscapes ?
-        new RegExp('(' + standardLocalChar.source + '|' + escapedLocalChar.source + ')') :
+        '(' + standardLocalChar + '|' + escapedChar + ')' :
         standardLocalChar;
-    var standardLocalSection = new RegExp('(' + standardLocalSectionChar.source + '+)');
+    var standardLocalSection = '(' + standardLocalSectionChar + '+)';
 
     // A quoted section can non-special characters legal in a standard section, plus anything
     // in mustBeQuotedLocalChar, plus escaped pairs. The string inside the quotes could be zero length.
-    var quotedLocalSectionChar = new RegExp('(' + standardLocalChar.source + '|' + mustBeQuotedLocalChar.source + '|' + escapedLocalChar.source + ')');
-    var quotedLocalSection = new RegExp('("' + quotedLocalSectionChar.source + '*")');
+    var quotedLocalSectionChar = '(' + standardLocalChar + '|' + mustBeQuotedLocalChar + '|' + escapedChar + ')';
+    var quotedLocalSection = '("' + quotedLocalSectionChar + '*")';
 
     // A comment can contain nested parentheses, and they are supposed to be properly nested/matching.
     // All we're checking is whether there is an outer pair that matches. This should not fail any valid
     // address, but it could pass an invalid address with improperly nested parentheses. We would
     // need to do more than regex checking to fully test comments.
-    var comment = /(\([\s\S]*\))/;
+    var comment = String.raw`(\([\s\S]*\))`;
 
     // Any section can be either unquoted (referred to here as standard) or quoted.
-    var localSection = new RegExp('(' + standardLocalSection.source + '|' + quotedLocalSection.source + ')');
+    var localSection = '(' + standardLocalSection + '|' + quotedLocalSection + ')';
 
     //  A section may start and/or end with zero or more comments, as long as comments are allowed.
     var commentedLocalSection = optAllowComments ?
-        new RegExp('(' + comment.source + '*' + localSection.source + comment.source + '*)') :
+        '(' + comment + '*' + localSection + comment + '*)' :
         localSection;
 
     // Local part can have any number of localSections (optionally with comments), each separated by a single . character.
-    var localPart = new RegExp(commentedLocalSection.source + String.raw`(\.` + commentedLocalSection.source + ')*');
+    var localPart = commentedLocalSection + String.raw`(\.` + commentedLocalSection + ')*';
 
 
     // Each label within a domain can contain dashes, but cannot start or end with a dash.
     // This will fail international non-ASCII domains.
-    var domainLabelInternalChar = /[a-zA-Z0-9\u0080-\uFFFF\-]/;
-    var domainLabelStartEndChar = /[a-zA-Z0-9\u0080-\uFFFF]/;
+    var domainLabelInternalChar = String.raw`[a-zA-Z0-9\u0080-\uFFFF\-]`;
+    var domainLabelStartEndChar = String.raw`[a-zA-Z0-9\u0080-\uFFFF]`;
 
     // A label contains up to 63 characters. Either a single start/end char (for a one-character-long label), 
     // or 0-61 internal characters surrounded by
     // start/end chars (for more than one character). Alternately phrased, a start/end character, optionally followed by
     // (zero or more internal characters followed by another start/end character).
-    var domainLabel = new RegExp('(' + domainLabelStartEndChar.source + '(' + domainLabelInternalChar.source + '{0,61}' + domainLabelStartEndChar.source + ')?)');
+    var domainLabel = '(' + domainLabelStartEndChar + '(' + domainLabelInternalChar + '{0,61}' + domainLabelStartEndChar + ')?)';
 
     // Like the local part, domain labels can have comments if the options don't disallow comments.
     var commentedDomainLabel = optAllowComments ?
-        new RegExp('(' + comment.source + '*' + domainLabel.source + comment.source + '*)') : 
+        '(' + comment + '*' + domainLabel + comment + '*)' : 
         domainLabel;
 
     // Domain has ONE or more labels, separated by . chars. (A top-level domain, which has no dots because it
     // is only a single label, is legal).
-    var normalDomainPart = new RegExp(commentedDomainLabel.source + String.raw`(\.` + commentedDomainLabel.source + ')*');
+    var normalDomainPart = commentedDomainLabel + String.raw`(\.` + commentedDomainLabel + ')*';
 
 
     // Domain can also be bracketed. This is supposed to be the host's literal address (e.g., an IP address),
     // but according to RFC2282 3.4.1 the only illegal unescaped characters between the brackets are [, ], and \ 
     // (and possibly some control characters).
     // Escaped characters (quoted-pair) are also allowed.
-    var bracketedDomainSimpleChar = /[^[\]\\]/;
-    var bracketedDomainChar = new RegExp('(' + bracketedDomainSimpleChar.source + '|' + escapedLocalChar.source + ')');
-    var bracketedDomainPart = new RegExp(String.raw`(\[` + bracketedDomainChar.source + String.raw`*\])`);
+    var bracketedDomainSimpleChar = String.raw`[^[\]\\]`;
+    var bracketedDomainChar = '(' + bracketedDomainSimpleChar + '|' + escapedChar + ')';
+    var bracketedDomainPart = String.raw`(\[` + bracketedDomainChar + String.raw`*\])`;
     var commentedBracketedDomain = optAllowComments ? 
-        new RegExp('(' + comment.source + '*' + bracketedDomainPart.source + comment.source + '*)') :
+        '(' + comment + '*' + bracketedDomainPart + comment + '*)' :
         bracketedDomainPart;
 
-    var domainPart = new RegExp('(' + normalDomainPart.source + '|' + commentedBracketedDomain.source + ')');
+    var domainPart = '(' + normalDomainPart + '|' + commentedBracketedDomain + ')';
 
     var fullAddress;
     if (!optAllowLocalAddresses) {
-        fullAddress = new RegExp('^' + localPart.source + '@' + domainPart.source + '$');
+        fullAddress = localPart + '@' + domainPart;
     } else if (optAllowLocalAddresses > 0) {
-        fullAddress = new RegExp('^' + localPart.source + '(@' + domainPart.source + ')?$');
+        fullAddress = localPart + '(@' + domainPart + ')?';
     } else {
-        fullAddress = new RegExp('^' + localPart.source + '$');
+        fullAddress = localPart;
     }
+    
+    var fullAddressWithEnds = new RegExp('^' + fullAddress + '$');
 
-    var regexResult = fullAddress.test(address);
+    var regexResult = fullAddressWithEnds.test(address);
     var fullResult = regexResult && (checkComments ? checkComments(!optAllowLocalAddresses) : true);
     return fullResult;
 }
