@@ -18,7 +18,7 @@ function validateEmailAddressFormat(address) {
     var mustBeQuotedLocalChar = new RegExp('[^' + standardLocalCharSet + mustBeEscapedLocalCharSet + String.raw`]`);
 
     // Any character (regardless of whether it needs escaped) can be escaped by a backslash
-    var escapedLocalChar = /(\\.)/;
+    var escapedLocalChar = /(\\[\s\S])/;
 
     // Non-special characters or escaped characters can be in an unquoted section. An unquoted
     // section must be non-zero length.
