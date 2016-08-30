@@ -142,3 +142,16 @@ The rules for a valid email address are surprisingly complex and are scattered t
    - IPv4 literal: [127.0.0.1]
    - IPv6 literal or general address literal: Inside the brackets, must contain a tag, followed by ':', folowed by other content. The other content cannot be empty and must be printable characters (excluding [, \, and ]).
 - There is no mention of backslash escapes in domain literals. (could be added)
+
+#### Notes after reviewing RFC 5322 in more detail
+- Printing characters are 0x21-0x7E
+- WSP = space or horizontal tab
+- Comment can contain FWS and/or printable ASCII (excluding parentheses and backslash) 
+- FWS includes WSP and/or newline, ends with WSP, but see next point
+- Quoted-string can contain FWS, printable ASCII (excluding double-quote and backslash)
+- Quoted strings on a per-label basis are allowed but obsolete
+- Domain literals can contain FWS and printable ASCII (excluding square brackets and backslash)
+- In addition, quoted-pair (backslash escape) and non-whitespace control characters in domain literal are allowed but obsolete. This means every character besides unescaped brackets/backslash is legal, as I've implemented.
+- Comments/FWS between period-separated elements of local-part and domain are allowed but obsolete.
+- Quoted-pair can have non-WS control characters, but this is obsolete.
+- Quoted-pair does not seem to be allowed outside of comment and quoted-string (and obsolete in domain literal)
