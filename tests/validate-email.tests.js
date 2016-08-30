@@ -791,3 +791,62 @@ QUnit.test('validateEmailAddressFormat_LocalAddressWithLocalRequired_ShouldAccep
         assert.ok(result.result, '"' + result.address + '" is a local address with local addresses required and should pass');
     })
 });
+
+QUnit.test('validateEmailAddressFormat_ReturnRegex_ShouldMatchValidAddresses', function (assert) {
+
+    // Arrange
+    var addresses = [
+        'a@b',
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkl@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghi',      
+        "!#$%&'*+-/=?^_`{|}~@example.com",        
+        '"abc\\"@\\"def"@example.com',        
+        'me@[This is a valid domain literal. <Really>, it is!\nTrust me. (It isn\'t meaningful in any way, though.)]',        
+        '(comment (nested comment ("third level"!) (another @third level)))me@abc.com',
+        'me@[127.0.0.1]'
+        ];
+    var options = { returnRegex: true };
+    var resultRegex;
+    var results = [];
+
+    // Act
+    resultRegex = validateEmailAddressFormat(null, options);
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:resultRegex.test(addr)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.address + '" is valid and should pass');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_ReturnRegexAndDisallowComments_ShouldNotMatchAddressesWithComments', function (assert) {
+
+    // Arrange
+    var addresses = [
+        '(comment)me@example.com',     
+        'me(comment)@example.com',         
+        'abc(comment).def@example.com',         
+        'me@(comment)example.com',       
+        'me@[127.0.0.1](comment)'  
+        ];
+    var options = { 
+        returnRegex: true,
+        allowComments: false
+    };
+    var resultRegex;
+    var results = [];
+
+    // Act
+    resultRegex = validateEmailAddressFormat(null, options);
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:resultRegex.test(addr)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.address + '" is has disallowed comments and should fail');
+    })
+});
