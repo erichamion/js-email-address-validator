@@ -20,10 +20,16 @@ validateEmailAddress(address[, options])
   
   Option | Default | Effect
   ------ | ------- | ------
+  **returnRegex** | **false** | If false, evaluates the address parameter for validity as an email address and returns true or false. If true, ignores the address parameter and returns a regular expression that can be used to check strings for validity as email addresses. Because the final regular expression is built from multiple small parts each time the function is called, saving the returned regular expression may be more efficient when testing multiple addresses. If true, implies `useRegexOnly` is also true.
   **useRegexOnly** | **false** | If true, don't do any validation that can't be accomplished using only regular expression matching. In particular, nested comments cannot be properly validated with regular expressions.
   **allowBareEscapes** | **true** | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
   **allowComments** | **true** | Allow comments in an address if true, disallow if false.
   **allowLocalAddresses** | **0** | If 0, every address must have a local part, an "@", and a domain part. If positive, then addresses with only a local part (no "@" and no domain part) are allowed in addition to full addresses. If negative, then _only_ addresses with only a local part are allowed, and full addresses are not allowed. The comparisons are not strict, so anything that compares like 0 or false will be considered 0, and true will be considered positive.
+
+### Return Value
+By default, returns a boolean. If the address parameter is a well-formed email address, returns true. Otherwise, returns false.
+
+If the `returnRegex` option is true, returns a regular expression that can be used to test any string for validity as an email address.
 
 ```
 var addr = 'myaddress@example.com';
@@ -35,6 +41,13 @@ if (validateEmailAddress(addr)) {
 }
 
 if (validateEmailAddress(addr, { useRegexOnly:true })) {
+  alert('Looks good!');
+} else {
+  alert('Try again, dummy!');
+}
+
+var addressMatchRegex = validateEmailAddress(null, { returnRegex: true });
+if (addressMatchRegex.test(addr)) {
   alert('Looks good!');
 } else {
   alert('Try again, dummy!');
