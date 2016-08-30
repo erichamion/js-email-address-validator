@@ -102,15 +102,15 @@ function validateEmailAddressFormat(address, options) {
         var fullAddress;
         if (allowLocalAddresses) {
             return function(lookaheadMatchString, localMatchString, domainMatchString) {
-                return lookaheadMatchString + '(' + localMatchString + '@' + domainMatchString + ')';
+                return '(' + lookaheadMatchString + localMatchString + '@' + domainMatchString + ')';
             };
         } else if (allowLocalAddresses > 0) {
             return function(lookaheadMatchString, localMatchString, domainMatchString) {
-                return lookaheadMatchString + '(' + localMatchString + '(@' + domainMatchString + ')?)';
+                return '(' + lookaheadMatchString + localMatchString + '(@' + domainMatchString + ')?)';
             };
         } else {
             return function(lookaheadMatchString, localMatchString, ignored) {
-                return lookaheadMatchString + '(' + localMatchString + ')';
+                return '(' + lookaheadMatchString + localMatchString + ')';
             };
         }
     }
