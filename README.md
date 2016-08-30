@@ -114,9 +114,31 @@ The rules for a valid email address are surprisingly complex and are scattered t
 
 
 ## Future Plans
+- RFC 5321 places some restrictions on domain literals. Implement those restrictions.
+- RFC 5321 also is more strict on the local part of the address than the rules I followed. Backslash escapes are not allowed in unquoted strings (which I have an option for), a quoted string must be the entire local part (not quoted or unquoted on a label-by-label basis), and I haven't fully reviewed to see if there are other restrictions. Review the RFC and implement these (possibly as options).
+  - (On the other hand, this paragraph in RFC 5321 seems to state that backslash escapes can be used outside of quoted strings):
+  
+  > Note that the backslash, "\", is a quote character, which is used to
+  > indicate that the next character is to be used literally (instead of
+  >  its normal interpretation).  For example, "Joe\,Smith" indicates a
+  >  single nine-character user name string with the comma being the
+  >  fourth character of that string.
+  
 - Review the RFCs to make sure whitespace and control characters are being handled properly.
 - Review how high-ASCII and non-ASCII characters should be treated.
 - Add additional options. Future options may include:
   - options for handling (or not handling) internationalized addresses with high-ASCII or non-ASCII characters
   - whether to allow addresses that meet the specification's length requirements but are too long to be used
   - whether to disallow certain things that are legal but discouraged (such as domain literals)
+
+
+#### Notes for RFC 5321 compatibility
+- Does not allow comments. (already an option)
+- If the local part has a quoted string, the quoted string must comprise the entire local part.
+- Unclear about backslash escapes in the local part. The definition only shows quoted-pair as part of quoted-string, but the text implies it can occur elsewhere. (already an option)
+- Only ASCII graphic characters and space can be backslash escaped. Other whitespace or control characters, including newline, are not allowed. (could be added)
+- Only ASCII graphic characters and space can be in a quoted string. Other whitespace or control characters, including newline are not allowed. (could be added)
+- Domain literal must be: (could be added)
+   - IPv4 literal: [127.0.0.1]
+   - IPv6 literal or general address literal: Inside the brackets, must contain a tag, followed by ':', folowed by other content. The other content cannot be empty and must be printable characters (excluding [, \, and ]).
+- There is no mention of backslash escapes in domain literals. (could be added)

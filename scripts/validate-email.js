@@ -39,6 +39,7 @@ function validateEmailAddressFormat(address, options) {
     
     // Surround the regex result with start and end markers, so an address must fill the entire string
     var fullAddressWithEnds = new RegExp('^' + fullAddress + '$');
+    alert(fullAddressWithEnds.source);
     
     // Compute the final result
     return getResult(fullAddressWithEnds, address);
