@@ -118,6 +118,5 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - Review how high-ASCII and non-ASCII characters should be treated.
 - Add additional options. Future options may include:
   - options for handling (or not handling) internationalized addresses with high-ASCII or non-ASCII characters
-  - whether to validate an address or return a regex (or array of regexes if needed). Since the final regex is built up from multiple parts, saving the regex could be more efficient than calling validateEmailAddress() multiple times when checking multiple addresses
   - whether to allow addresses that meet the specification's length requirements but are too long to be used
   - whether to disallow certain things that are legal but discouraged (such as domain literals)
