@@ -4,19 +4,19 @@ function validateEmailAddressFormat(address, options) {
     
     // Functions that may not be needed or that may have different definitions
     // depending on options:
-    var checkComments;
-    var checkLength;
-    var buildStandardLocalSectionMatchString;
-    var buildLocalSectionMatchString;
-    var buildDomainPartMatchString;
-    var buildHostnameMatchString;
-    var buildDomainLiteralMatchString;
-    var buildHostnameLabelMatchString;
-    var buildFullAddressMatchString;
+    var checkComments,
+        buildLengthLookaheadMatchString,
+        buildStandardLocalSectionMatchString,
+        buildLocalSectionMatchString,
+        buildDomainPartMatchString,
+        buildHostnameMatchString,
+        buildDomainLiteralMatchString,
+        buildHostnameLabelMatchString,
+        buildFullAddressMatchString,
 
-    // Option-dependent values
-    var comment;
-    var escapedChar;
+        // Option-dependent values
+        comment,
+        escapedChar;
     
     
     // Process options and defaults
@@ -27,12 +27,12 @@ function validateEmailAddressFormat(address, options) {
     setOptionDependentValues(opts);
     
     // Basic length check
-    if (!checkLength(address)) return false;
     
     // Compose the regex (stored as a string) to match the entire addresss
+    var lengthLookaheadPart = buildLengthLookaheadMatchString(address);
     var localPart = buildLocalPartMatchString(comment, escapedChar);
     var domainPart = buildDomainPartMatchString ? buildDomainPartMatchString(comment, escapedChar) : '';
-    var fullAddress = buildFullAddressMatchString(localPart, domainPart);
+    var fullAddress = buildFullAddressMatchString(lengthLookaheadPart, localPart, domainPart);
     
     // Surround the regex result with start and end markers, so an address must fill the entire string
     var fullAddressWithEnds = new RegExp('^' + fullAddress + '$');
@@ -75,7 +75,7 @@ function validateEmailAddressFormat(address, options) {
     function defineFunctions(opts) {
         buildFullAddressMatchString = defineBuildFullAddressMatchString(opts.allowLocalAddresses);
         checkComments = defineCheckComments(opts.allowComments && !opts.useRegexOnly, !opts.allowLocalAddresses);
-        checkLength = defineCheckLength(opts.allowLocalAddresses);
+        buildLengthLookaheadMatchString = defineBuildLengthLookaheadMatchString(opts.allowLocalAddresses);
         buildStandardLocalSectionMatchString = defineBuildStandardLocalSectionMatchString(opts.allowBareEscapes);
         buildLocalSectionMatchString = defineBuildLocalSectionMatchString(opts.allowComments);
         buildDomainPartMatchString = defineBuildDomainPartMatchString(opts.allowLocalAddresses >= 0, opts.allowComments);
@@ -100,17 +100,17 @@ function validateEmailAddressFormat(address, options) {
     
     function defineBuildFullAddressMatchString(allowLocalAddresses) {
         var fullAddress;
-        if (!opts.allowLocalAddresses) {
-            return function(localMatchString, domainMatchString) {
-                return localMatchString + '@' + domainMatchString;
+        if (allowLocalAddresses) {
+            return function(lookaheadMatchString, localMatchString, domainMatchString) {
+                return lookaheadMatchString + '(' + localMatchString + '@' + domainMatchString + ')';
             };
-        } else if (opts.allowLocalAddresses > 0) {
-            return function(localMatchString, domainMatchString) {
-                return localMatchString + '(@' + domainMatchString + ')?';
+        } else if (allowLocalAddresses > 0) {
+            return function(lookaheadMatchString, localMatchString, domainMatchString) {
+                return lookaheadMatchString + '(' + localMatchString + '(@' + domainMatchString + ')?)';
             };
         } else {
-            return function(localMatchString, ignored) {
-                return localMatchString;
+            return function(lookaheadMatchString, localMatchString, ignored) {
+                return lookaheadMatchString + '(' + localMatchString + ')';
             };
         }
     }
@@ -210,18 +210,26 @@ function validateEmailAddressFormat(address, options) {
         };
     }
     
-    function defineCheckLength(allowLocalAddresses) {
-        // First test: Local part is 1-64 characters, domain part is at least one character, and total
-        // is no longer than 254 characters (addresses can exist with up to 255 characters in the domain
-        // part, total length up to 320 characters, but they can't be used for sending or receiving mail.
+    function defineBuildLengthLookaheadMatchString(allowLocalAddresses) {
+        
+        function makeLookahead(str) {
+            return '(?=' + str + ')';
+        }
+        
+        // Local part is 1-64 characters, domain part is at least one character, and total is no longer 
+        // than 254 characters (addresses can exist with up to 255 characters in the domain part, total
+        // length up to 320 characters, but they can't be used for sending or receiving mail.
         if (!allowLocalAddresses) {
             // Must have local and domain part. Check total length and local length (no need to check
             // domain length because the total length requirement is more strict than the domain length
             // requirement)
             return function(addr) { 
-                if (addr.length > 254) return false;
-                if (!(/^[\s\S]{1,64}@[\s\S]+$/.test(addr))) return false;
-                return true;
+                var totalLengthMatchString = String.raw`[\s\S]{1,254}$`;
+                //if (addr.length > 254) return false;
+                var partsMatchString = String.raw`[\s\S]{1,64}@[\s\S]{1,255}$`;
+                //if (!(/^[\s\S]{1,64}@[\s\S]+$/.test(addr))) return false;
+                return makeLookahead(totalLengthMatchString) + makeLookahead(partsMatchString);
+                //return true;
             }
         } else if (allowLocalAddresses > 0) {
             // May have local and domain part. Check total length.
@@ -231,15 +239,20 @@ function validateEmailAddressFormat(address, options) {
             // long.
             
             return function(addr) {
-                if (addr.length > 254) return false;
-                if (!(/^[\s\S]{1,64}(@[\s\S]+)?$/.test(addr))) return false;
-                return true;
+                var totalLengthMatchString = String.raw`[\s\S]{1,254}$`;
+                //if (addr.length > 254) return false;
+                var partsMatchString = String.raw`[\s\S]{1,64}(@[\s\S]{1,255})?$`;
+                //if (!(/^[\s\S]{1,64}(@[\s\S]+)?$/.test(addr))) return false;
+                return makeLookahead(totalLengthMatchString) + makeLookahead(partsMatchString);
+                //return true;
             }
         } else {
             // No domain part. Must be no more than 64 characters total.
             
             return function(addr) {
-                return (addr.length <= 64);
+                var totalLengthMatchString = String.raw`[\s\S]{1,64}$`;
+                return makeLookahead(totalLengthMatchString);
+                //return (addr.length <= 64);
             }
         }
     }
