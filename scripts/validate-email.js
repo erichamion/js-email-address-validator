@@ -13,6 +13,7 @@ function validateEmailAddressFormat(address, options) {
         buildDomainLiteralMatchString,
         buildHostnameLabelMatchString,
         buildFullAddressMatchString,
+        getResult,
 
         // Option-dependent values
         comment,
@@ -20,7 +21,9 @@ function validateEmailAddressFormat(address, options) {
     
     
     // Process options and defaults
-    var opts = getOptions();
+    var opts = getOptions(options);
+    // Prevent unintended use of the bare unprocessed argument
+    options = undefined;  
     
     // Assign any functions that depend on options
     defineFunctions(opts);
@@ -37,13 +40,9 @@ function validateEmailAddressFormat(address, options) {
     // Surround the regex result with start and end markers, so an address must fill the entire string
     var fullAddressWithEnds = new RegExp('^' + fullAddress + '$');
     
-    // Do the regex check
-    var regexResult = fullAddressWithEnds.test(address);
+    // Compute the final result
+    return getResult(fullAddressWithEnds, address);
     
-    // Do additional non-regex checking
-    var fullResult = regexResult && (checkComments ? checkComments(!opts.allowLocalAddresses) : true);
-    
-    return fullResult;
     
     
     
@@ -55,24 +54,33 @@ function validateEmailAddressFormat(address, options) {
         return val;
     }
     
-    function getOptions() {
+    function getOptions(options) {
         // Prevent null reference errors
         var optsWithoutDefaults = options || {};
         // Get options from opts, or specify defaults if not given
         var resultOpts = {
             useRegexOnly: coalesce(optsWithoutDefaults.useRegexOnly, false),
+            returnRegex: coalesce(optsWithoutDefaults.returnRegex, false),
             allowBareEscapes: coalesce(optsWithoutDefaults.allowBareEscapes, true),
             allowComments: coalesce(optsWithoutDefaults.allowComments, true),
             allowLocalAddresses: coalesce(optsWithoutDefaults.allowLocalAddresses, 0) // non-zero = allowed. negative = required. 
         }
         
-        // Prevent unintended use of the bare unprocessed argument
-        options = undefined;
+        // Check for conflicting options
+        if (resultOpts.returnRegex && !resultOpts.useRegexOnly && 'returnRegex' in optsWithoutDefaults) {
+            console.warn('validateEmailAddressFormat() with inconsistent options. returnRegex is true, but useRegexOnly explicitly set to false.');
+        }
+        
+        // Resolve conflicting options
+        if (resultOpts.returnRegex) {
+            resultOpts.useRegexOnly = true;
+        }
         
         return resultOpts;
     }
     
     function defineFunctions(opts) {
+        getResult = buildGetResult(opts.returnRegex, opts.allowComments && !opts.useRegexOnly);
         buildFullAddressMatchString = defineBuildFullAddressMatchString(opts.allowLocalAddresses);
         checkComments = defineCheckComments(opts.allowComments && !opts.useRegexOnly, !opts.allowLocalAddresses);
         buildLengthLookaheadMatchString = defineBuildLengthLookaheadMatchString(opts.allowLocalAddresses);
@@ -96,6 +104,27 @@ function validateEmailAddressFormat(address, options) {
         // but if we ever add options to disallow domain literals and to disallow quoted strings, then
         // there would be a combination of options that doesn't allow any escaped characters.
         escapedChar = String.raw`(\\[\s\S])`;
+    }
+    
+    function buildGetResult(returnRegex, shouldCheckComments) {
+        if (returnRegex) {
+            return function(regex, ignored) {
+                return regex;
+            };
+        } else if (shouldCheckComments) {
+            return function(regex, addr) {
+                // Do the regex check
+                var regexResult = regex.test(addr);
+    
+                // Do additional non-regex checking for nested comments
+                return regexResult && checkComments();
+            }
+        } else {
+            return function(regex, addr) {
+                // Do the regex check only
+                return regex.test(addr);
+            }
+        }
     }
     
     function defineBuildFullAddressMatchString(allowLocalAddresses) {
