@@ -2,10 +2,8 @@ function validateEmailAddressFormat(address, options) {
     
     "use strict";
     
-    /*****
-     * Functions that may not be needed or that may have different definitions
-     * depending on options:
-     *****/
+    // Functions that may not be needed or that may have different definitions
+    // depending on options:
     var checkComments;
     var checkLength;
     var buildStandardLocalSectionMatchString;
@@ -16,12 +14,10 @@ function validateEmailAddressFormat(address, options) {
     var buildHostnameLabelMatchString;
     var buildFullAddressMatchString;
 
-    
-    /*****
-     * Option-dependent constant-like values
-     *****/
+    // Option-dependent values
     var comment;
     var escapedChar;
+    
     
     // Process options and defaults
     var opts = getOptions();
@@ -51,9 +47,7 @@ function validateEmailAddressFormat(address, options) {
     
     
     
-    /*****
-     * Functions that have constant definition:
-     *****/
+    // Functions that have constant definition:
     
     function coalesce(val, def) {
         // Coalesce to default on null or undefined, but not on false/falsey values.
