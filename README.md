@@ -76,13 +76,16 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - Folding Whitespace: Folding whitespace occurs in specific contexts. It consists of any number of space, tab, and/or newline characters, and it always ends with a space or tab. (not fully implemented - some contexts accept any whitespace when they should take folding whitespace)
 - Backslash Escape: A backslash followed by another character forms a "quoted-pair". This has the effect of escaping the second character in the pair, making it legal where it otherwise would be illegal and removing any special meaning it may have. This is not allowed in all contexts.
 - Comment:
-  - A label in either the local part or the domain part can start and/or end with comments.
   - According to the validator at isemail.info, multiple comments can appear in succession. (I need to review the RFCs to see whether this is correct, but I've allowed this)
   - A comment is surrounded by parentheses.
   - Valid unescaped characters in a comment are folding whitespace and any printing character, except for backslash and parentheses (but see the next point).
   - A comment can contain nested comments, each surrounded by parentheses. The parentheses must properly nest and match. **Note:** If the option `useRegexOnly` is true, this cannot be properly validated. In this case, valid comments will be accepted correctly, but some invalid comments will also be accepted.
   - Backslash escapes are allowed inside a comment, and this can be used to insert a parenthesis or backslash.
-  - By default, this validator accepts addresses with comments. This behavior can be changed with the `allowComments` option.
+- CFWS:
+  - Comment and/or Folding Whitespace
+  - A series of one or more comments and/or Folding Whitespace regions
+  - A label in either the local part or the domain part can start and/or end with CFWS.
+  - By default, this validator accepts addresses with CFWS. This behavior can be changed with the `allowComments` option.
 - Local Part:
   - The local part can be up to 64 characters long.
   - Normal label: Normally, the legal characters within a label in the local part of the address include alphanumeric low-ASCII characters and the set {``!#$%&'*+-/=?^_`{|}~``}.
