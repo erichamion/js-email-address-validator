@@ -24,7 +24,7 @@ function validateEmailAddressFormat(address, options) {
     var FWS_STRICT_MATCH = '((' + WSP_MATCH + '*' + String.raw`\n)?` + WSP_MATCH + '+)';
     var FWS_OBS_MATCH = '(' + WSP_MATCH + String.raw`+(\n` + WSP_MATCH + '+)*)';
     var FWS_MATCH = '(' + FWS_STRICT_MATCH + '|' + FWS_OBS_MATCH + ')';
-    var PRINTING_MATCH = '[!-\\uFFFF]';
+    var PRINTING_MATCH = '[!-~]';
     
     
     // Process options and defaults
@@ -324,7 +324,7 @@ function validateEmailAddressFormat(address, options) {
     function buildLocalUncommentedSectionMatchString(escapedCharMatchString) {
         // These characters can appear without being escaped or quoted. Don't include the . here, 
         // because it's special (can't be first, last, or consecutive) and handled elsewhere.
-        var standardCharSet = String.raw`\`\-a-zA-Z0-9!#$%&'*+/=?^_{|}~\u0080-\uFFFF`;
+        var standardCharSet = String.raw`\`\-a-zA-Z0-9!#$%&'*+/=?^_{|}~`;
         var standardCharMatchString = '[' + standardCharSet + ']';
         // Characters that can be either quoted or escaped
         var quotableCharMatchString = buildQuotableLocalCharMatchString(escapedCharMatchString);
@@ -394,8 +394,8 @@ function validateEmailAddressFormat(address, options) {
     function buildHostnameUncommentedLabelMatchString() {
         // Each label within a domain can contain dashes, but cannot start or end with a dash.
             // This will fail international non-ASCII domains.
-            var internalChar = String.raw`[a-zA-Z0-9\u0080-\uFFFF\-]`;
-            var startEndChar = String.raw`[a-zA-Z0-9\u0080-\uFFFF]`;
+            var internalChar = String.raw`[a-zA-Z0-9\-]`;
+            var startEndChar = String.raw`[a-zA-Z0-9]`;
 
             // A label contains up to 63 characters. Either a single start/end char (for a one-character-long label), 
             // or 0-61 internal characters surrounded by

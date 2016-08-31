@@ -111,9 +111,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
 
 
 ## Known Limitations
-- Does not really handle addresses that contain non-ASCII or high-ASCII characters.
-  - In the local part, any character above 0x80 (the start of the high-ASCII range) is assumed to be valid, which seems to be the recommendation.
-  - In the domain part, any character above 0x80 is assumed to be a valid alphanumeric character. This **MAY** be correct per IDNA2003 (I haven't checked), but it is certainly **NOT** correct per IDNA2008. IDNA2008 disallows letter variants (capital, full-width/half-width), symbols, and punctuation. As long as the ASCII period (0x2E) is the only valid label/subdomain separator character (again, I haven't checked whether this is true), I don't believe any valid domains would be rejected, but invalid domains could be accepted.
+- Does not handle addresses that contain non-ASCII or high-ASCII characters.
 - Comments are included in the overall length of the address, the length of the local part, and the length of the domain part. They are not included in the length of individual labels in the domain. This is probably not the correct handling.
 
 
@@ -129,7 +127,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
   >  fourth character of that string.
   
 - Review the RFCs to make sure whitespace and control characters are being handled properly.
-- Review how high-ASCII and non-ASCII characters should be treated.
+- Review RFC 6531 and related documents to handle high-ASCII and non-ASCII characters.
 - Add additional options. Future options may include:
   - options for handling (or not handling) internationalized addresses with high-ASCII or non-ASCII characters
   - whether to allow addresses that meet the specification's length requirements but are too long to be used
