@@ -239,7 +239,7 @@ QUnit.test('validateEmailAddressFormat_LocalHasQuotedSymbols_ShouldAccept', func
         '"abc[]def"@example.com',       
         '"abc[def]ghi"@example.com',    
         '"abc def"@example.com',        
-        '"abc\ndef"@example.com',
+        '"abc\n\tdef"@example.com',
         '"abc,def"@example.com',
         '"abc....def"@example.com',     
         'abc."def@".ghi@example.com',
@@ -266,6 +266,7 @@ QUnit.test('validateEmailAddressFormat_LocalHasInvalidCharactersInQuotedString_S
         '"a"bc"@example.com',            
         '"abc"@"def"@example.com',        
         '"@abc\\".def@example.com',  
+        '"abc\x03def@example.com'
         ];
     var results = [];
 
@@ -551,6 +552,7 @@ QUnit.test('validateEmailAddressFormat_CommentsInvalidFWS_ShouldReject', functio
         '(comment with \nnewline not followed by space or tab)abc@abc.def',  
         'me@(inner comment) comment)after',
         'me(comment.has(nested inner comment).and starts.before@and.has.another(nested inner).but.ends.after.the.at)def.com',
+        'me(comment with \x03 control character)@examle.com',
         ];
     var results = [];
 

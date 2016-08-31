@@ -22,7 +22,7 @@ function validateEmailAddressFormat(address, options) {
     // Constants
     var WSP_MATCH = '( |\t)';
     var FWS_MATCH = '((' + WSP_MATCH + String.raw`|\n)*` + WSP_MATCH + ')';
-    var PRINTING_MATCH = '[!-~]';
+    var PRINTING_MATCH = '[!-\\uFFFF]';
     
     
     // Process options and defaults
@@ -59,8 +59,8 @@ function validateEmailAddressFormat(address, options) {
         return val;
     }
     
-    function makeLookahead(str) {
-        return '(?=' + str + ')';
+    function makeLookahead(str, negativeLookAhead) {
+        return '(?' + (negativeLookAhead ? '!' : '=') + str + ')';
     }
     
     function getOptions(options) {
@@ -109,12 +109,6 @@ function validateEmailAddressFormat(address, options) {
             var commentContent = '(' + FWS_MATCH + '|(' + makeLookahead(String.raw`[^\\]`) + PRINTING_MATCH + '))';
             comment = String.raw`(\(` + commentContent +  String.raw`*\))`;
         }
-        
-        
-//        comment = opts.allowComments ? 
-//            '(\((' + FWS_MATCH + '|' + makeLookahead(String.raw`[^)(\\]`) + PRINTING_MATCH + ')\))':
-//            '';
-        //comment = opts.allowComments ? String.raw`(\(*\))` : '';   
         
         // Escaped characters (quoted-pairs) can occur in unquoted local labels if allowed by options,
         // in comments if comments are allowed, in domain literals, and in quoted strings. Currently,
@@ -165,7 +159,9 @@ function validateEmailAddressFormat(address, options) {
     function buildLocalPartMatchString(commentMatchString, escapedCharMatchString) {
         // Local part can have any number of sections (optionally with comments), each separated by a single . character.
         var section = buildLocalSectionMatchString(escapedCharMatchString, commentMatchString);
-        return section + String.raw`(\.` + section + ')*';
+        var result = section + String.raw`(\.` + section + ')*';
+        console.info(new RegExp(result).test('TEST'));
+        return result;
     }
     
     function defineBuildDomainPartMatchString(canHaveDomain, allowComments) {
@@ -183,7 +179,9 @@ function validateEmailAddressFormat(address, options) {
             
             var hostnameMatchString = buildHostnameMatchString(commentMatchString);
             var literalMatchString = buildDomainLiteralMatchString(escapedCharMatchString, commentMatchString);
-            return '(' + hostnameMatchString + '|' + literalMatchString + ')';
+            var result = '(' + hostnameMatchString + '|' + literalMatchString + ')';
+        console.info(new RegExp(result).test('TEST'));
+        return result;
         };
     }
     
@@ -273,7 +271,9 @@ function validateEmailAddressFormat(address, options) {
                 //if (addr.length > 254) return false;
                 var partsMatchString = String.raw`[\s\S]{1,64}@[\s\S]{1,255}$`;
                 //if (!(/^[\s\S]{1,64}@[\s\S]+$/.test(addr))) return false;
-                return makeLookahead(totalLengthMatchString) + makeLookahead(partsMatchString);
+                var result = makeLookahead(totalLengthMatchString) + makeLookahead(partsMatchString);
+        console.info(new RegExp(result).test('TEST'));
+        return result;
                 //return true;
             }
         } else if (allowLocalAddresses > 0) {
@@ -288,7 +288,9 @@ function validateEmailAddressFormat(address, options) {
                 //if (addr.length > 254) return false;
                 var partsMatchString = String.raw`[\s\S]{1,64}(@[\s\S]{1,255})?$`;
                 //if (!(/^[\s\S]{1,64}(@[\s\S]+)?$/.test(addr))) return false;
-                return makeLookahead(totalLengthMatchString) + makeLookahead(partsMatchString);
+                var result = makeLookahead(totalLengthMatchString) + makeLookahead(partsMatchString);
+        console.info(new RegExp(result).test('TEST'));
+        return result;
                 //return true;
             }
         } else {
@@ -296,7 +298,9 @@ function validateEmailAddressFormat(address, options) {
             
             return function(addr) {
                 var totalLengthMatchString = String.raw`[\s\S]{1,64}$`;
-                return makeLookahead(totalLengthMatchString);
+                var result = makeLookahead(totalLengthMatchString);
+        console.info(new RegExp(result).test('TEST'));
+        return result;
                 //return (addr.length <= 64);
             }
         }
@@ -307,20 +311,26 @@ function validateEmailAddressFormat(address, options) {
         // characters if bare escapes are not allowed). An unquoted section must be non-zero length.
         if (allowBareEscapes) {
             return function(standardLocalCharMatchString, escapedCharMatchString) {
-                return '((' + standardLocalCharMatchString + '|' + escapedCharMatchString + ')+)';
+                var result = '((' + standardLocalCharMatchString + '|' + escapedCharMatchString + ')+)';
+        console.info(new RegExp(result).test('TEST'));
+        return result;
             };
         } else {
             return function(standardLocalCharMatchString, ignored) {
-                return '(' + standardLocalCharMatchString + '+)';
+                var result = '(' + standardLocalCharMatchString + '+)';
+        console.info(new RegExp(result).test('TEST'));
+        return result;
             };
         }
     }
     
-    function buildQuotedLocalSectionMatchString(standardCharMatchString, mustBeQuotedCharMatchString, escapedCharMatchString) {
+    function buildQuotedLocalSectionMatchString(standardCharMatchString, quotableCharMatchString, escapedCharMatchString) {
         // A quoted section can contain non-special characters legal in a standard section, plus anything
         // in mustBeQuotedChar, plus escaped pairs. The string inside the quotes could be zero length.
-        var quotedSectionChar = '(' + standardCharMatchString + '|' + mustBeQuotedCharMatchString + '|' + escapedCharMatchString + ')';
-        return '("' + quotedSectionChar + '*")';
+        var quotedSectionChar = quotableCharMatchString;
+        var result = '("' + quotedSectionChar + '*")';
+        console.info(new RegExp(result).test('TEST'));
+        return result;
     }
     
     function buildLocalUncommentedSectionMatchString(escapedCharMatchString) {
@@ -329,32 +339,49 @@ function validateEmailAddressFormat(address, options) {
         var standardCharSet = String.raw`\`\-a-zA-Z0-9!#$%&'*+/=?^_{|}~\u0080-\uFFFF`;
         var standardCharMatchString = '[' + standardCharSet + ']';
         // Characters that can be either quoted or escaped
-        var mustBeQuotedCharMatchString = buildMustBeQuotedOrEscapedLocalCharMatchString(standardCharSet);
+        var quotableCharMatchString = buildQuotableLocalCharMatchString(escapedCharMatchString);
         
         // Any section can be either standard (unquoted) or quoted.
         var standardSection = buildStandardLocalSectionMatchString(standardCharMatchString, escapedCharMatchString);
-        var quotedSection = buildQuotedLocalSectionMatchString(standardCharMatchString, mustBeQuotedCharMatchString, escapedCharMatchString);
-        return '(' + standardSection + '|' + quotedSection + ')';
+        var quotedSection = buildQuotedLocalSectionMatchString(standardCharMatchString, quotableCharMatchString, escapedCharMatchString);
+        var result = '(' + standardSection + '|' + quotedSection + ')';
+        console.info(new RegExp(result).test('TEST'));
+        return result;
 
     }
     
-    function buildMustBeQuotedOrEscapedLocalCharMatchString(standardLocalCharSet) {
-        // These cannot simply be quoted, but must be escaped even when inside quotes
-        var mustBeEscapedCharSet = String.raw`"\\`;
-
-        // Anything that isn't standard or in mustBeEscapedCharSet can be either escaped or quoted.
-        return '[^' + standardLocalCharSet + mustBeEscapedCharSet + ']';
+//    function buildMustBeQuotedOrEscapedLocalCharMatchString(standardLocalCharSet) {
+    function buildQuotableLocalCharMatchString(escapedCharMatchString) {
+//        // These cannot simply be quoted, but must be escaped even when inside quotes
+//        var mustBeEscapedCharSet = String.raw`"\\`;
+//
+//        // Anything that isn't standard or in mustBeEscapedCharSet can be either escaped or quoted.
+//        return '[^' + standardLocalCharSet + mustBeEscapedCharSet + ']';
+        
+        // The above comment is not true. Quoted string can have Folding Whitespace, printing characters
+        // (except for " and \), and escaped characters.
+        // We don't really care whether a character is also legal outside of quoted strings, so our match string
+        // is as simple as that definition (which isn't quite as simple as it might seem).
+        var allowedPrintingChars = '(' + makeLookahead(String.raw`["\\]`, true) + PRINTING_MATCH + ')';
+        var result = '(' + FWS_MATCH + '|' + allowedPrintingChars + '|' + escapedCharMatchString + ')';
+        
+        console.info(new RegExp(result).test('TEST'));
+        return result;
     }
     
     function defineBuildLocalSectionMatchString(allowComments) {
         if (allowComments) {
             return function(escapedCharMatchString, commentMatchString) {
                 var bareSectionMatchString = buildLocalUncommentedSectionMatchString(escapedCharMatchString);
-                return '(' + commentMatchString + '*' + bareSectionMatchString + commentMatchString + '*)';
+                var result = '(' + commentMatchString + '*' + bareSectionMatchString + commentMatchString + '*)';
+        console.info(new RegExp(result).test('TEST'));
+        return result;
             };
         } else {
             return function(escapedCharMatchString, gnored) {
-                return buildLocalUncommentedSectionMatchString(escapedCharMatchString);
+                var result = buildLocalUncommentedSectionMatchString(escapedCharMatchString);
+        console.info(new RegExp(result).test('TEST'));
+        return result;
             };
         }
     }
@@ -367,7 +394,9 @@ function validateEmailAddressFormat(address, options) {
 
             // Domain has ONE or more labels, separated by . chars. (A top-level domain, which has no dots because it
             // is only a single label, is legal).
-            return labelMatchString + String.raw`(\.` + labelMatchString + ')*';
+            var result = labelMatchString + String.raw`(\.` + labelMatchString + ')*';
+        console.info(new RegExp(result).test('TEST'));
+        return result;
         };
     }
     
@@ -375,11 +404,15 @@ function validateEmailAddressFormat(address, options) {
         if (allowComments) {
             return function (commentMatchString) {
                 var bareLabel = buildHostnameUncommentedLabelMatchString();
-                return '(' + commentMatchString + '*' + bareLabel + commentMatchString + '*)';
+                var result = '(' + commentMatchString + '*' + bareLabel + commentMatchString + '*)';
+        console.info(new RegExp(result).test('TEST'));
+        return result;
             };
         } else {
             return function(ignored) {
-                return buildHostnameUncommentedLabelMatchString();
+                var result = buildHostnameUncommentedLabelMatchString();
+        console.info(new RegExp(result).test('TEST'));
+        return result;
             }
         }
     }
@@ -394,18 +427,24 @@ function validateEmailAddressFormat(address, options) {
             // or 0-61 internal characters surrounded by
             // start/end chars (for more than one character). Alternately phrased, a start/end character, optionally followed by
             // (zero or more internal characters followed by another start/end character).
-            return '(' + startEndChar + '(' + internalChar + '{0,61}' + startEndChar + ')?)';
+            var result = '(' + startEndChar + '(' + internalChar + '{0,61}' + startEndChar + ')?)';
+        console.info(new RegExp(result).test('TEST'));
+        return result;
     }
     
     function defineBuildDomainLiteralMatchString(allowComments) {
         if (allowComments) {
             return function( escapedCharMatchString, commentMatchString) {
                 var bareDomain = buildUncommentedDomainLiteralMatchString(escapedCharMatchString);
-                return '(' + commentMatchString + '*' + bareDomain + commentMatchString + '*)';
+                var result = '(' + commentMatchString + '*' + bareDomain + commentMatchString + '*)';
+        console.info(new RegExp(result).test('TEST'));
+        return result;
             };
         } else {
             return function(escapedCharMatchString, ignored) {
-                return buildUncommentedDomainLiteralMatchString(escapedCharMatchString);
+                var result = buildUncommentedDomainLiteralMatchString(escapedCharMatchString);
+        console.info(new RegExp(result).test('TEST'));
+        return result;
             };
         }
     }
@@ -417,7 +456,9 @@ function validateEmailAddressFormat(address, options) {
         // Escaped characters (quoted-pair) are also allowed.
         var simpleChar = String.raw`[^[\]\\]`;
         var simpleOrEscapedChar = '(' + simpleChar + '|' + escapedCharMatchString + ')';
-        return String.raw`(\[` + simpleOrEscapedChar + String.raw`*\])`;
+        var result = String.raw`(\[` + simpleOrEscapedChar + String.raw`*\])`;
+        console.info(new RegExp(result).test('TEST'));
+        return result;
     }
     
     

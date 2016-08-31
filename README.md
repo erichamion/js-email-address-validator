@@ -86,7 +86,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - Local Part:
   - The local part can be up to 64 characters long.
   - Normal label: Normally, the legal characters within a label in the local part of the address include alphanumeric low-ASCII characters and the set {``!#$%&'*+-/=?^_`{|}~``}.
-  - Quoted string: An entire label (or an entire local part, but then the local part could be considered a single label) can be surrounded in double-quotes. Inside a quoted string, any printable or whitespace character is valid, with the exception of the backslash and the double-quote.
+  - Quoted string: An entire label (or an entire local part, but then the local part could be considered a single label) can be surrounded in double-quotes. Inside a quoted string, any printable character or folding whitespace is valid, with the exception of the backslash and the double-quote. Backslash escapes are also allowed withing a quoted string.
   - Backslash Escape: 
     - Since naked backslash and naked double-quote cannot exist within a quoted string, they can be preceded by a backslash to become a quoted-pair. _This seems to be the only fully agreed upon non-redundant use of the backslash escape in the non-comment portion of a local part._
     - According to RFC 3696, ANY character can be part of a quoted-pair, regardless of whether it must be quoted. (However, quoting/escaping a character that does not need to be quoted is redundant, is unnecessary, is needlessly verbose, and uses more characters than it needs to.)
@@ -131,6 +131,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
   - options for handling (or not handling) internationalized addresses with high-ASCII or non-ASCII characters
   - whether to allow addresses that meet the specification's length requirements but are too long to be used
   - whether to disallow certain things that are legal but discouraged (such as domain literals)
+  - options to disallow addresses that RFC 5322 considers obsolete
 
 
 #### Notes for RFC 5321 compatibility
@@ -149,7 +150,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - WSP = space or horizontal tab
 - Comment can contain FWS and/or printable ASCII (excluding parentheses and backslash) -- implemented
 - FWS includes WSP and/or newline, always ends with WSP, but see next point
-- Quoted-string can contain FWS, printable ASCII (excluding double-quote and backslash)
+- Quoted-string can contain FWS, printable ASCII (excluding double-quote and backslash), and quoted-pair -- implemented
 - Quoted strings on a per-label basis are allowed but obsolete
 - Domain literals can contain FWS and printable ASCII (excluding square brackets and backslash)
 - In addition, quoted-pair (backslash escape) and non-whitespace control characters in domain literal are allowed but obsolete. This means every character besides unescaped brackets/backslash is legal, as I've implemented.
