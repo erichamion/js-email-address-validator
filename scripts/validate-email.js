@@ -19,6 +19,11 @@ function validateEmailAddressFormat(address, options) {
         comment,
         escapedChar;
     
+    // Constants
+    var WSP_MATCH = '( |\t)';
+    var FWS_MATCH = '((' + WSP_MATCH + String.raw`|\n)*` + WSP_MATCH + ')';
+    var PRINTING_MATCH = '[!-~]';
+    
     
     // Process options and defaults
     var opts = getOptions(options);
@@ -39,7 +44,6 @@ function validateEmailAddressFormat(address, options) {
     
     // Surround the regex result with start and end markers, so an address must fill the entire string
     var fullAddressWithEnds = new RegExp('^' + fullAddress + '$');
-    alert(fullAddressWithEnds.source);
     
     // Compute the final result
     return getResult(fullAddressWithEnds, address);
@@ -53,6 +57,10 @@ function validateEmailAddressFormat(address, options) {
         // Coalesce to default on null or undefined, but not on false/falsey values.
         if (val === undefined || val === null) return def;
         return val;
+    }
+    
+    function makeLookahead(str) {
+        return '(?=' + str + ')';
     }
     
     function getOptions(options) {
@@ -97,7 +105,16 @@ function validateEmailAddressFormat(address, options) {
         // address, but it could pass an invalid address with improperly nested parentheses. We would
         // need to do more than regex checking to fully test comments.
         // We only try to match against comments if the options allow comments.
-        comment = opts.allowComments ? String.raw`(\([\s\S]*\))` : '';   
+        if (opts.allowComments) {
+            var commentContent = '(' + FWS_MATCH + '|(' + makeLookahead(String.raw`[^\\]`) + PRINTING_MATCH + '))';
+            comment = String.raw`(\(` + commentContent +  String.raw`*\))`;
+        }
+        
+        
+//        comment = opts.allowComments ? 
+//            '(\((' + FWS_MATCH + '|' + makeLookahead(String.raw`[^)(\\]`) + PRINTING_MATCH + ')\))':
+//            '';
+        //comment = opts.allowComments ? String.raw`(\(*\))` : '';   
         
         // Escaped characters (quoted-pairs) can occur in unquoted local labels if allowed by options,
         // in comments if comments are allowed, in domain literals, and in quoted strings. Currently,
@@ -242,9 +259,7 @@ function validateEmailAddressFormat(address, options) {
     
     function defineBuildLengthLookaheadMatchString(allowLocalAddresses) {
         
-        function makeLookahead(str) {
-            return '(?=' + str + ')';
-        }
+        
         
         // Local part is 1-64 characters, domain part is at least one character, and total is no longer 
         // than 254 characters (addresses can exist with up to 255 characters in the domain part, total
