@@ -147,7 +147,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - There is no mention of backslash escapes in domain literals. (could be added)
 
 #### Notes after reviewing RFC 5322 in more detail
-- Printing characters are 0x21-0x7E
+- Printing characters are 0x21-0x7E (!-~)
 - WSP = space or horizontal tab
 - Comment can contain FWS and/or printable ASCII (excluding parentheses and backslash) -- implemented
 - FWS includes WSP and/or newline, always ends with WSP, but see next point
