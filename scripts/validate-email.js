@@ -16,12 +16,14 @@ function validateEmailAddressFormat(address, options) {
         getResult,
 
         // Option-dependent values
-        comment,
-        escapedChar;
+        escapedChar,
+        cfwsMatchString;
     
     // Constants
     var WSP_MATCH = '( |\t)';
-    var FWS_MATCH = '((' + WSP_MATCH + String.raw`|\n)*` + WSP_MATCH + ')';
+    var FWS_STRICT_MATCH = '((' + WSP_MATCH + '*' + String.raw`\n)?` + WSP_MATCH + '+)';
+    var FWS_OBS_MATCH = '(' + WSP_MATCH + String.raw`+(\n` + WSP_MATCH + '+)*)';
+    var FWS_MATCH = '(' + FWS_STRICT_MATCH + '|' + FWS_OBS_MATCH + ')';
     var PRINTING_MATCH = '[!-\\uFFFF]';
     
     
@@ -38,8 +40,8 @@ function validateEmailAddressFormat(address, options) {
     
     // Compose the regex (stored as a string) to match the entire addresss
     var lengthLookaheadPart = buildLengthLookaheadMatchString(address);
-    var localPart = buildLocalPartMatchString(comment, escapedChar);
-    var domainPart = buildDomainPartMatchString ? buildDomainPartMatchString(comment, escapedChar) : '';
+    var localPart = buildLocalPartMatchString(cfwsMatchString, escapedChar);
+    var domainPart = buildDomainPartMatchString ? buildDomainPartMatchString(cfwsMatchString, escapedChar) : '';
     var fullAddress = buildFullAddressMatchString(lengthLookaheadPart, localPart, domainPart);
     
     // Surround the regex result with start and end markers, so an address must fill the entire string
@@ -107,7 +109,9 @@ function validateEmailAddressFormat(address, options) {
         // We only try to match against comments if the options allow comments.
         if (opts.allowComments) {
             var commentContent = '(' + FWS_MATCH + '|(' + makeLookahead(String.raw`[^\\]`) + PRINTING_MATCH + '))';
-            comment = String.raw`(\(` + commentContent +  String.raw`*\))`;
+            var comment = String.raw`(\(` + commentContent +  String.raw`*\))`;
+            
+            cfwsMatchString = '(((' + FWS_MATCH + '?' + comment + ')+' + FWS_MATCH + '?)|' + FWS_MATCH + ')';
         }
         
         // Escaped characters (quoted-pairs) can occur in unquoted local labels if allowed by options,
