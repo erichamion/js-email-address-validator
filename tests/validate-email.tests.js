@@ -546,6 +546,44 @@ QUnit.test('validateEmailAddressFormat_CommentsBadNesting_ShouldReject', functio
     })
 });
 
+QUnit.test('validateEmailAddressFormat_FWSValid_ShouldAccept', function (assert) {
+    // Arrange
+    var addresses = [
+        'me \n\t@\tabc \n (comment) .def \n '
+        ];
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.address + '" has valid Folding Whitespace and should pass');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_FWSInvalid_ShouldReject', function (assert) {
+    // Arrange
+    var addresses = [
+        'me\n@abc.def'
+        ];
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.address + '" has invalid Folding Whitespace and should fail');
+    })
+});
+
 QUnit.test('validateEmailAddressFormat_CommentsInvalidFWS_ShouldReject', function (assert) {
     // Arrange
     var addresses = [
