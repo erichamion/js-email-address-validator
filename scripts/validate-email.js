@@ -6,11 +6,10 @@ function validateEmailAddressFormat(address, options) {
     // depending on options:
     var checkComments,
         buildLengthLookaheadMatchString,
-        buildStandardLocalSectionMatchString,
         buildDomainPartMatchString,
         buildHostnameMatchString,
         buildDomainLiteralMatchString,
-        buildHostnameLabelMatchString,
+        buildDomainAtomMatchString,
         buildFullAddressMatchString,
         getResult,
         buildAtomMatchString,
@@ -100,10 +99,8 @@ function validateEmailAddressFormat(address, options) {
         buildFullAddressMatchString = defineBuildFullAddressMatchString(opts.allowLocalAddresses);
         checkComments = defineCheckComments(opts.allowComments && !opts.useRegexOnly, !opts.allowLocalAddresses);
         buildLengthLookaheadMatchString = defineBuildLengthLookaheadMatchString(opts.allowLocalAddresses);
-        buildStandardLocalSectionMatchString = defineBuildStandardLocalSectionMatchString(opts.allowBareEscapes);
         buildDomainPartMatchString = defineBuildDomainPartMatchString(opts.allowLocalAddresses >= 0, opts.allowComments);
         buildAtomMatchString = defineBuildAtomMatchString(opts.allowComments);
-        //buildUncommentedAtomMatchString = defineBuildUncommentedAtomMatchString(opts.allowBareEscapes);
         buildDotAtomMatchString = defineBuildDotAtomMatchString(opts.allowComments);
         buildQuotedStringMatchString = defineBuildQuotedStringMatchString(opts.allowComments);
         
@@ -186,7 +183,7 @@ function validateEmailAddressFormat(address, options) {
         
         var atext = getAtextMatchStringForLocal(escapedCharMatchString);
         
-        var dotAtom = buildDotAtomMatchString(atext, commentMatchString);
+        var dotAtom = buildDotAtomMatchString(buildLocalDotAtomTextMatchString(atext), commentMatchString);
         var qString = buildQuotedStringMatchString(escapedCharMatchString, commentMatchString);
         var obsLocalPart = buildObsLocalPartMatchString(atext, escapedCharMatchString, commentMatchString);
         
@@ -196,16 +193,17 @@ function validateEmailAddressFormat(address, options) {
     function defineBuildDotAtomMatchString(allowComments) {
         // RFC 5322 3.2.3: dot-atom = [CFWS] dot-atom-text [CFWS]
         if (allowComments) {
-            return function(atextMatchString, cfwsMatchString) {
-                var dotAtomText = buildDotAtomTextMatchString(atextMatchString);
-                return '(' + cfwsMatchString + '?' + dotAtomText + cfwsMatchString + '?)';
+            return function(dotAtomTextMatchString, cfwsMatchString) {
+                return '(' + cfwsMatchString + '?' + dotAtomTextMatchString + cfwsMatchString + '?)';
             };
         } else {
-            return buildDotAtomTextMatchString;
+            return function(dotAtomTextMatchString) {
+                return dotAtomTextMatchString;
+            }
         }
     }
     
-    function buildDotAtomTextMatchString(atextMatchString) {
+    function buildLocalDotAtomTextMatchString(atextMatchString) {
         // RFC 5322 3.2.3: dot-atom-text = 1*atext *("." 1*atext)
         // A series of at 1 or more blocks of atext, each at least 1 character long, and each separated
         // by a dot character
@@ -252,12 +250,39 @@ function validateEmailAddressFormat(address, options) {
         buildDomainLiteralMatchString = defineBuildDomainLiteralMatchString(allowComments);
         
         return function(commentMatchString, escapedCharMatchString) {
-            // A domain can be either a hostname or a bracketed domain literal.
+            // RFC 5322 3.4.1: domain = dot-atom / domain-literal / obs-domain
+            // That is all that RFC 5322 specifies directly, but the hostname is restricted
+            // elsewhere, so we can't use the same dot-atom definition as for the local part.
+            var dotAtom = buildDotAtomMatchString(buildDomainDotAtomTextMatchString(ATEXT_STRICT_MATCH), commentMatchString);
+            var literal = buildDomainLiteralMatchString(escapedCharMatchString, commentMatchString);
+            var obsDomain = buildObsDomainMatchString(commentMatchString);
             
-            var hostnameMatchString = buildHostnameMatchString(commentMatchString);
-            var literalMatchString = buildDomainLiteralMatchString(escapedCharMatchString, commentMatchString);
-            return '(' + hostnameMatchString + '|' + literalMatchString + ')';
+            return '(' + dotAtom + '|' + literal + '|' + obsDomain + ')';
+            
+//            
+//            // A domain can be either a hostname or a bracketed domain literal.
+//            
+//            var hostnameMatchString = buildHostnameMatchString(commentMatchString);
+//            var literalMatchString = buildDomainLiteralMatchString(escapedCharMatchString, commentMatchString);
+//            return '(' + hostnameMatchString + '|' + literalMatchString + ')';
         };
+    }
+    
+    function buildDomainDotAtomTextMatchString() {
+        // RFC 5322 3.2.3: dot-atom-text = 1*atext *("." 1*atext)
+        // If atom were not allowed to have comments, then this would be equivalent to:
+        // atom *("." atom)
+        // Fortunately, we have a way of getting a match string for an atom without comments.
+        var atom = buildDomainUncommentedAtomMatchString();
+        return '(' + atom + String.raw`(\.` + atom + ')*)';
+    }
+    
+    function buildObsDomainMatchString(cfwsMatchString) {
+        // RFC 5322 4.4: obs-domain = atom *("." atom)
+        // Dot-separated list of one or more atoms. Because there is no option for escaped
+        // characters, always use the strict atext.
+        var atom = buildDomainAtomMatchString(cfwsMatchString);
+        return '(' + atom + String.raw`(\.` + atom + ')*)';
     }
     
     function defineCheckComments(shouldCheckComments, requireNakedAt) {
@@ -375,20 +400,6 @@ function validateEmailAddressFormat(address, options) {
         }
     }
     
-    function defineBuildStandardLocalSectionMatchString(allowBareEscapes) {
-        // Non-special characters or escaped characters can be in an unquoted section (or only non-special
-        // characters if bare escapes are not allowed). An unquoted section must be non-zero length.
-        if (allowBareEscapes) {
-            return function(standardLocalCharMatchString, escapedCharMatchString) {
-                return '((' + standardLocalCharMatchString + '|' + escapedCharMatchString + ')+)';
-            };
-        } else {
-            return function(standardLocalCharMatchString, ignored) {
-                return '(' + standardLocalCharMatchString + '+)';
-            };
-        }
-    }
-    
     function defineBuildQuotedStringMatchString(allowComments) {
         // RFC 5322 3.2.4: quoted-string = [CFWS] DQUOTE *([FWS] qcontent) [FWS] DQUOTE [CFWS]
         
@@ -437,26 +448,11 @@ function validateEmailAddressFormat(address, options) {
         
     }
     
-//    function defineBuildLocalSectionMatchString(allowComments) {
-//        
-//        
-//        if (allowComments) {
-//            return function(escapedCharMatchString, commentMatchString) {
-//                var bareSectionMatchString = buildLocalUncommentedSectionMatchString(escapedCharMatchString);
-//                return '(' + commentMatchString + '*' + bareSectionMatchString + commentMatchString + '*)';
-//            };
-//        } else {
-//            return function(escapedCharMatchString, gnored) {
-//                return buildLocalUncommentedSectionMatchString(escapedCharMatchString);
-//            };
-//        }
-//    }
-    
     function defineBuildHostnameMatchString(allowComments) {
-        buildHostnameLabelMatchString = defineBuildHostnameLabelMatchString(allowComments);
+        buildDomainAtomMatchString = defineBuildDomainAtomMatchString(allowComments);
         
         return function(commentMatchString) {
-            var labelMatchString = buildHostnameLabelMatchString(commentMatchString);
+            var labelMatchString = buildDomainAtomMatchString(commentMatchString);
 
             // Domain has ONE or more labels, separated by . chars. (A top-level domain, which has no dots because it
             // is only a single label, is legal).
@@ -464,30 +460,30 @@ function validateEmailAddressFormat(address, options) {
         };
     }
     
-    function defineBuildHostnameLabelMatchString(allowComments) {
+    //function defineBuildHostnameLabelMatchString(allowComments) {
+    function defineBuildDomainAtomMatchString(allowComments) {
         if (allowComments) {
             return function (commentMatchString) {
-                var bareLabel = buildHostnameUncommentedLabelMatchString();
-                return '(' + commentMatchString + '*' + bareLabel + commentMatchString + '*)';
+                var bareAtom = buildDomainUncommentedAtomMatchString();
+                return '(' + commentMatchString + '?' + bareAtom + commentMatchString + '?)';
             };
         } else {
-            return function(ignored) {
-                return buildHostnameUncommentedLabelMatchString();
-            }
+            return buildDomainUncommentedAtomMatchString;
         }
     }
     
-    function buildHostnameUncommentedLabelMatchString() {
-        // Each label within a domain can contain dashes, but cannot start or end with a dash.
-            // This will fail international non-ASCII domains.
-            var internalChar = String.raw`[a-zA-Z0-9\-]`;
-            var startEndChar = String.raw`[a-zA-Z0-9]`;
+    //function buildHostnameUncommentedLabelMatchString() {
+    function buildDomainUncommentedAtomMatchString() {
+        // In a hostname domain, an atom in RFC 5322 language corresponds to a label in RFC 1035
+        // and RFC 1123 language.
+        // Each label may contain dashes, letters, and digits, but cannot start or end with a dash.
+        var internalChar = String.raw`[a-zA-Z0-9\-]`;
+        var startEndChar = String.raw`[a-zA-Z0-9]`;
 
-            // A label contains up to 63 characters. Either a single start/end char (for a one-character-long label), 
-            // or 0-61 internal characters surrounded by
-            // start/end chars (for more than one character). Alternately phrased, a start/end character, optionally followed by
-            // (zero or more internal characters followed by another start/end character).
-            return '(' + startEndChar + '(' + internalChar + '{0,61}' + startEndChar + ')?)';
+        // A label may be up to 63 characters long and cannot be empty. Either a single start/end 
+        // char (for a one-character-long label),  or 0-61 internal characters surrounded by
+        // start/end chars (for more than one character).
+        return '(' + startEndChar + '(' + internalChar + '{0,61}' + startEndChar + ')?)';
     }
     
     function defineBuildDomainLiteralMatchString(allowComments) {
