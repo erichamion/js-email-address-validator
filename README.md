@@ -73,12 +73,13 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - The local part and the domain part are each composed of one or more sections or labels separated by a period.
 - No label can be entirely empty, which means that two periods cannot _normally_ appear consecutively (but see below for escaped characters and quoted strings). This also means that neither the local part nor the domain part will start or end with an unescaped period.
 - An email address cannot be used if it is more than 254 characters. Longer addresses can exist, but the commands that send and receive mail require a string of 256 characters or less, and that string includes a surrounding pair of angle brackets that takes up two of the 256 characters. This validator will reject any address longer than 254 characters because it cannot be used.
+- Folding Whitespace: Folding whitespace occurs in specific contexts. It consists of any number of space, tab, and/or newline characters, and it always ends with a space or tab. (not fully implemented - some contexts accept any whitespace when they should take folding whitespace)
 - Backslash Escape: A backslash followed by another character forms a "quoted-pair". This has the effect of escaping the second character in the pair, making it legal where it otherwise would be illegal and removing any special meaning it may have. This is not allowed in all contexts.
 - Comment:
   - A label in either the local part or the domain part can start and/or end with comments.
   - According to the validator at isemail.info, multiple comments can appear in succession. (I need to review the RFCs to see whether this is correct, but I've allowed this)
   - A comment is surrounded by parentheses.
-  - Valid unescaped characters in a comment are whitespace and any printing character, except for backslash and parentheses (but see the next point).
+  - Valid unescaped characters in a comment are folding whitespace and any printing character, except for backslash and parentheses (but see the next point).
   - A comment can contain nested comments, each surrounded by parentheses. The parentheses must properly nest and match. **Note:** If the option `useRegexOnly` is true, this cannot be properly validated. In this case, valid comments will be accepted correctly, but some invalid comments will also be accepted.
   - Backslash escapes are allowed inside a comment, and this can be used to insert a parenthesis or backslash.
   - By default, this validator accepts addresses with comments. This behavior can be changed with the `allowComments` option.
@@ -146,8 +147,8 @@ The rules for a valid email address are surprisingly complex and are scattered t
 #### Notes after reviewing RFC 5322 in more detail
 - Printing characters are 0x21-0x7E
 - WSP = space or horizontal tab
-- Comment can contain FWS and/or printable ASCII (excluding parentheses and backslash) 
-- FWS includes WSP and/or newline, ends with WSP, but see next point
+- Comment can contain FWS and/or printable ASCII (excluding parentheses and backslash) -- implemented
+- FWS includes WSP and/or newline, always ends with WSP, but see next point
 - Quoted-string can contain FWS, printable ASCII (excluding double-quote and backslash)
 - Quoted strings on a per-label basis are allowed but obsolete
 - Domain literals can contain FWS and printable ASCII (excluding square brackets and backslash)
