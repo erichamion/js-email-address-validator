@@ -14,6 +14,11 @@ function validateEmailAddressFormat(address, options) {
         buildHostnameLabelMatchString,
         buildFullAddressMatchString,
         getResult,
+        buildAtomMatchString,
+        //buildUncommentedAtomMatchString,
+        buildDotAtomMatchString,
+        getAtextMatchStringForLocal,
+        buildQuotedStringMatchString,
 
         // Option-dependent values
         escapedChar,
@@ -25,6 +30,7 @@ function validateEmailAddressFormat(address, options) {
     var FWS_OBS_MATCH = '(' + WSP_MATCH + String.raw`+(\n` + WSP_MATCH + '+)*)';
     var FWS_MATCH = '(' + FWS_STRICT_MATCH + '|' + FWS_OBS_MATCH + ')';
     var PRINTING_MATCH = '[!-~]';
+    var ATEXT_STRICT_MATCH = String.raw`[\`\-a-zA-Z0-9!#$%&'*+/=?^_{|}~]`;
     
     
     // Process options and defaults
@@ -91,6 +97,7 @@ function validateEmailAddressFormat(address, options) {
     }
     
     function defineFunctions(opts) {
+        getAtextMatchStringForLocal = defineGetAtextMatchStringForLocal(opts.allowBareEscapes);
         getResult = buildGetResult(opts.returnRegex, opts.allowComments && !opts.useRegexOnly);
         buildFullAddressMatchString = defineBuildFullAddressMatchString(opts.allowLocalAddresses);
         checkComments = defineCheckComments(opts.allowComments && !opts.useRegexOnly, !opts.allowLocalAddresses);
@@ -98,6 +105,10 @@ function validateEmailAddressFormat(address, options) {
         buildStandardLocalSectionMatchString = defineBuildStandardLocalSectionMatchString(opts.allowBareEscapes);
         buildLocalSectionMatchString = defineBuildLocalSectionMatchString(opts.allowComments);
         buildDomainPartMatchString = defineBuildDomainPartMatchString(opts.allowLocalAddresses >= 0, opts.allowComments);
+        buildAtomMatchString = defineBuildAtomMatchString(opts.allowComments);
+        //buildUncommentedAtomMatchString = defineBuildUncommentedAtomMatchString(opts.allowBareEscapes);
+        buildDotAtomMatchString = defineBuildDotAtomMatchString(opts.allowComments);
+        buildQuotedStringMatchString = defineBuildQuotedStringMatchString(opts.allowComments);
         
     }
     
@@ -120,6 +131,19 @@ function validateEmailAddressFormat(address, options) {
         // but if we ever add options to disallow domain literals and to disallow quoted strings, then
         // there would be a combination of options that doesn't allow any escaped characters.
         escapedChar = String.raw`(\\[\s\S])`;
+       
+    }
+    
+    function defineGetAtextMatchStringForLocal(allowBareEscapes) {
+        if (allowBareEscapes) {
+            return function(escapedCharMatchString) {
+                return '(' + ATEXT_STRICT_MATCH + '|' + escapedCharMatchString + ')';
+            };
+        } else {
+            return function(ignored) {
+                return ATEXT_STRICT_MATCH;
+            };
+        }
     }
     
     function buildGetResult(returnRegex, shouldCheckComments) {
@@ -161,10 +185,85 @@ function validateEmailAddressFormat(address, options) {
     }
     
     function buildLocalPartMatchString(commentMatchString, escapedCharMatchString) {
+        // RFC 5322 3.4.1: local-part = dot-atom / quoted-string / obs-local-part
+        
+        var atext = getAtextMatchStringForLocal(escapedCharMatchString);
+        
+        var dotAtom = buildDotAtomMatchString(atext, commentMatchString);
+        var qString = buildQuotedStringMatchString(escapedCharMatchString, commentMatchString);
+        var obsLocalPart = buildObsLocalPartMatchString(atext, escapedCharMatchString, commentMatchString);
+        
+        return '(' + dotAtom + '|' + qString + '|' + obsLocalPart + ')'; 
+        
+        
         // Local part can have any number of sections (optionally with comments), each separated by a single . character.
         var section = buildLocalSectionMatchString(escapedCharMatchString, commentMatchString);
         return section + String.raw`(\.` + section + ')*';
     }
+    
+    function defineBuildDotAtomMatchString(allowComments) {
+        // RFC 5322 3.2.3: dot-atom = [CFWS] dot-atom-text [CFWS]
+        if (allowComments) {
+            return function(atextMatchString, cfwsMatchString) {
+                var dotAtomText = buildDotAtomTextMatchString(atextMatchString);
+                return '(' + cfwsMatchString + '?' + dotAtomText + cfwsMatchString + '?)';
+            };
+        } else {
+            return buildDotAtomTextMatchString;
+        }
+    }
+    
+    function buildDotAtomTextMatchString(atextMatchString) {
+        // RFC 5322 3.2.3: dot-atom-text = 1*atext *("." 1*atext)
+        // A series of at least 1 blocks of atext, each at least 1 character long, and each separated
+        // by a dot character
+        return '(' + atextMatchString + String.raw`+(\.` + atextMatchString + '+)*)';
+    }
+    
+    function buildObsLocalPartMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString) {
+        // RFC 5322 4.4: obs-local-part = word *("." word)
+        var word = buildWordMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString);
+        return '(' + word + String.raw`(\.` + word + ')*)';
+    }
+    
+    function buildWordMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString) {
+        // RFC 5322 3.2.5: word = atom / quoted-string
+        var atom = buildAtomMatchString(atextMatchString, cfwsMatchString);
+        var qString = buildQuotedStringMatchString(escapedCharMatchString, cfwsMatchString);
+        
+        return '(' + atom + '|' + qString + ')';
+    }
+    
+    function defineBuildAtomMatchString(allowComments) {
+        // RFC 5322 3.2.3: atom = [CFWS] 1*atext [CFWS]
+        
+        if (allowComments) {
+            return function(atextMatchString, cfwsMatchString) {
+//                var bareAtom = buildUncommentedAtomMatchString(atextMatchString);
+                return '(' + cfwsMatchString + '?' + atextMatchString + '+' + cfwsMatchString + '?)';
+            };
+        } else {
+            return function(atextMatchString, ignored) {
+                return atextMatchString + '+';
+            };
+        }
+    }
+    
+//    function defineBuildUncommentedAtomMatchString(allowBareEscapes) {
+//        // RFC 5322 3.2.3: atom = [CFWS] 1*atext [CFWS]
+//        // Must not be empty, contains at least 1 atext character. CFWS is not
+//        // handled here.
+//        
+//        if (allowBareEscapes) {
+//            return function(atextMatchString) {
+//                return '((' + ATEXT_MATCH + '|' escapedCharMatchString + ')+)';
+//            };
+//        } else {
+//            return function(ignored) {
+//                return '(' + ATEXT_MATCH + '+)';
+//            };
+//        }
+//    }
     
     function defineBuildDomainPartMatchString(canHaveDomain, allowComments) {
         if (!canHaveDomain) {
@@ -314,6 +413,28 @@ function validateEmailAddressFormat(address, options) {
         }
     }
     
+    function defineBuildQuotedStringMatchString(allowComments) {
+        // RFC 5322 3.2.4: quoted-string = [CFWS] DQUOTE *([FWS] qcontent) [FWS] DQUOTE [CFWS]
+        
+        if (allowComments) {
+            return function(escapedCharMatchString, cfwsMatchString) {
+                var baseQuotedString = buildUncommentedQuotedString(escapedCharMatchString);
+                return '(' + cfwsMatchString + '?' + baseQuotedString + cfwsMatchString + '?)';
+            };
+        } else {
+            return buildUncommentedQuotedString;
+        }
+    }
+    
+    function buildUncommentedQuotedString(escapedCharMatchString) {
+        // DQUOTE *([FWS] qcontent) [FWS] DQUOTE
+        // qcontent is either qtext or quoted-pair (that is, it's semantically a single character
+        // within the quoted string. Note that the quoted string can be empty aside from the
+        // surrounding double-quotes.
+        var qcontentMatchString = buildQuotableLocalCharMatchString(escapedCharMatchString)
+        return '("(' + FWS_MATCH + '?' + qcontentMatchString + ')*' + FWS_MATCH + '?")'
+    }
+    
     function buildQuotedLocalSectionMatchString(standardCharMatchString, quotableCharMatchString, escapedCharMatchString) {
         // A quoted section can contain non-special characters legal in a standard section, plus anything
         // in mustBeQuotedChar, plus escaped pairs. The string inside the quotes could be zero length.
@@ -354,6 +475,8 @@ function validateEmailAddressFormat(address, options) {
     }
     
     function defineBuildLocalSectionMatchString(allowComments) {
+        
+        
         if (allowComments) {
             return function(escapedCharMatchString, commentMatchString) {
                 var bareSectionMatchString = buildLocalUncommentedSectionMatchString(escapedCharMatchString);
