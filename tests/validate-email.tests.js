@@ -189,7 +189,7 @@ QUnit.test('validateEmailAddressFormat_LocalHasInvalidSymbol_ShouldReject', func
     })
 });
 
-QUnit.test('validateEmailAddressFormat_LocalhasEscapedSymbols_ShouldAccept', function (assert) {
+QUnit.test('validateEmailAddressFormat_LocalHasBareEscapedSymbols_ShouldReject', function (assert) {
 
     // Arrange
     var addresses = [
@@ -222,7 +222,7 @@ QUnit.test('validateEmailAddressFormat_LocalhasEscapedSymbols_ShouldAccept', fun
     // Assert
     assert.expect(addresses.length);
     results.forEach(function(result) {
-        assert.ok(result.result, '"' + result.address + '" has escaped symbols in the local part and should pass');
+        assert.notOk(result.result, '"' + result.address + '" has escaped symbols in the local part and should fail');
     })
 });
 
@@ -648,6 +648,44 @@ QUnit.test('validateEmailAddressFormat_LocalDisallowedEscapedSymbols_ShouldRejec
     assert.expect(addresses.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.address + '" has escaped symbols in the local part, but disallows bare escapes, and should fail');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_LocalAllowedEscapedSymbols_ShouldAccept', function (assert) {
+
+    // Arrange
+    var addresses = [
+        'abc\\@def@example.com',        // @ in middle of local part
+        '\\@abc@example.com',           // @ at start of local part
+        'abc\\@@example.com',           // @ at end of local part
+        'ab\\"c\\"d@example.com',       // "
+        '\\"abc@example.com',           // unbalanced "
+        'abc\\"@example.com',           // unbalanced "
+        'abc\\[@example.com',           // [
+        'abc\\]@example.com',           // ]
+        'abc\\[\\]def@example.com',     // [ and ]
+        'abc\\[def\\]ghi@example.com',  // [ and ]
+        'abc\\ def@example.com',        // space
+        'abc\\\ndef@example.com',       // newline
+        'abc\\,def@example.com',        // comma
+        'abc.\\.def@example.com',       // consecutive dot
+        'abc\\..def@example.com',       // consecutive dot
+        '\\.abc@example.com',           // leading dot
+        'abc\\.@example.com',           // trailing dot
+        '\\a\\b\\c\\!#\\$%\\&\'*\\+-\\/=\\?^\\_`{\\|}~@example.com' // Unnecessarily escaped characters
+        ];
+    var options = { allowBareEscapes:true };
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.address + '" has escaped symbols in the local part, but explicitly allows bare escapes, and should pass');
     })
 });
 

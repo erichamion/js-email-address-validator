@@ -3,7 +3,9 @@ Email address validator in JavaScript
 
 This validator will tell with high accuracy whether a given string could possibly be a standard-compliant email address. This is intended to provide validation as strict as possible without failing any valid email address. It was written as a fun challenge.
 
-You likely do not need this amount of validation. Input validation will typically be very simple, such as `/.+@.+/.test(addr)` or `/.+@.+\..+/.test(addr)`. If that basic validation passes, then the address will be fully verified by sending a message to it and wait for the user to respond with some action, which is the only way to truly know whether an address is valid.
+By default, the validation conforms to RFC 5322. Options can be set to change the validation behavior.
+
+You likely do not need this amount of validation. Input validation will typically be very simple, such as `/.+@.+/.test(addr)`. If that basic validation passes, then the address will be fully verified by sending a message to it and wait for the user to respond with some action, which is the only way to truly know whether an address is valid.
 
 
 ## Syntax
@@ -22,7 +24,7 @@ validateEmailAddress(address[, options])
   ------ | ------- | ------
   **returnRegex** | **false** | If false, evaluates the address parameter for validity as an email address and returns true or false. If true, ignores the address parameter and returns a regular expression that can be used to check strings for validity as email addresses. Because the final regular expression is built from multiple small parts each time the function is called, saving the returned regular expression may be more efficient when testing multiple addresses. If true, implies `useRegexOnly` is also true.
   **useRegexOnly** | **false** | If true, don't do any validation that can't be accomplished using only regular expression matching. In particular, nested comments cannot be properly validated with regular expressions.
-  **allowBareEscapes** | **true** | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
+  **allowBareEscapes** | **false** | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
   **allowComments** | **true** | Allow comments in an address if true, disallow if false.
   **allowLocalAddresses** | **0** | If 0, every address must have a local part, an "@", and a domain part. If positive, then addresses with only a local part (no "@" and no domain part) are allowed in addition to full addresses. If negative, then _only_ addresses with only a local part are allowed, and full addresses are not allowed. The comparisons are not strict, so anything that compares like 0 or false will be considered 0, and true will be considered positive.
 
@@ -69,7 +71,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - [Internationalized Domain Names (IDN) FAQ](http://unicode.org/faq/idn.html)
 
 ### Rules followed
-- An email address (in the language of RFC 2822, an addr-spec) contains a local part, followed by "@", followed by a domain part. (This behavior can be modified to either allow or require addresses with _only_ a local part using the allowLocalAddresses option)
+- An email address (in the language of RFC 2822 and RFC 5322, an addr-spec) contains a local part, followed by "@", followed by a domain part. (This behavior can be modified to either allow or require addresses with _only_ a local part using the allowLocalAddresses option)
 - The local part and the domain part are each composed of one or more sections or labels separated by a period.
 - No label can be entirely empty, which means that two periods cannot _normally_ appear consecutively (but see below for escaped characters and quoted strings). This also means that neither the local part nor the domain part will start or end with an unescaped period.
 - An email address cannot be used if it is more than 254 characters. Longer addresses can exist, but the commands that send and receive mail require a string of 256 characters or less, and that string includes a surrounding pair of angle brackets that takes up two of the 256 characters. This validator will reject any address longer than 254 characters because it cannot be used.
@@ -92,8 +94,8 @@ The rules for a valid email address are surprisingly complex and are scattered t
   - Quoted string: An entire label (or an entire local part, but then the local part could be considered a single label) can be surrounded in double-quotes. Inside a quoted string, any printable character or folding whitespace is valid, with the exception of the backslash and the double-quote. Backslash escapes are also allowed withing a quoted string.
   - Backslash Escape: 
     - Since naked backslash and naked double-quote cannot exist within a quoted string, they can be preceded by a backslash to become a quoted-pair. _This seems to be the only fully agreed upon non-redundant use of the backslash escape in the non-comment portion of a local part._
-    - According to RFC 3696, ANY character can be part of a quoted-pair, regardless of whether it must be quoted. (However, quoting/escaping a character that does not need to be quoted is redundant, is unnecessary, is needlessly verbose, and uses more characters than it needs to.)
-    - According to RFC 3696,a quoted-pair may occur either within a quoted string or in a normal unquoted label. **Many sources disagree with this interpretation, stating that a quoted-pair MUST be within a quoted string.** By default, this validator follows the rule as given in RFC 3696, allowing backslash escapes anywhere in the local part. This behavior can be changed with the `allowBareEscapes` option.
+    - ANY character can be part of a quoted-pair, regardless of whether it must be quoted. (However, quoting/escaping a character that does not need to be quoted is redundant, unnecessary, needlessly verbose, and wasteful.)
+    - Most sources agree that a backslash escape can occur within a quoted string but not in an unquoted label. RFC 3696 disagrees, stating that a quoted-pair (backslash escape) can occur in either type of label. By default, this validator does **not** allow backslash escapes in unquoted labels. This behavior can be changed using the `allowBareEscapes` option.
 - Domain Part:
   - The domain part can be either a host name or a domain literal.
   - Domain Literal:

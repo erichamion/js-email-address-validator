@@ -72,7 +72,7 @@ function validateEmailAddressFormat(address, options) {
         var resultOpts = {
             useRegexOnly: coalesce(optsWithoutDefaults.useRegexOnly, false),
             returnRegex: coalesce(optsWithoutDefaults.returnRegex, false),
-            allowBareEscapes: coalesce(optsWithoutDefaults.allowBareEscapes, true),
+            allowBareEscapes: coalesce(optsWithoutDefaults.allowBareEscapes, false),
             allowComments: coalesce(optsWithoutDefaults.allowComments, true),
             allowLocalAddresses: coalesce(optsWithoutDefaults.allowLocalAddresses, 0) // non-zero = allowed. negative = required. 
         }
