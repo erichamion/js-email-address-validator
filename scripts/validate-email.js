@@ -7,7 +7,6 @@ function validateEmailAddressFormat(address, options) {
     var checkComments,
         buildLengthLookaheadMatchString,
         buildStandardLocalSectionMatchString,
-        buildLocalSectionMatchString,
         buildDomainPartMatchString,
         buildHostnameMatchString,
         buildDomainLiteralMatchString,
@@ -15,7 +14,6 @@ function validateEmailAddressFormat(address, options) {
         buildFullAddressMatchString,
         getResult,
         buildAtomMatchString,
-        //buildUncommentedAtomMatchString,
         buildDotAtomMatchString,
         getAtextMatchStringForLocal,
         buildQuotedStringMatchString,
@@ -103,7 +101,6 @@ function validateEmailAddressFormat(address, options) {
         checkComments = defineCheckComments(opts.allowComments && !opts.useRegexOnly, !opts.allowLocalAddresses);
         buildLengthLookaheadMatchString = defineBuildLengthLookaheadMatchString(opts.allowLocalAddresses);
         buildStandardLocalSectionMatchString = defineBuildStandardLocalSectionMatchString(opts.allowBareEscapes);
-        buildLocalSectionMatchString = defineBuildLocalSectionMatchString(opts.allowComments);
         buildDomainPartMatchString = defineBuildDomainPartMatchString(opts.allowLocalAddresses >= 0, opts.allowComments);
         buildAtomMatchString = defineBuildAtomMatchString(opts.allowComments);
         //buildUncommentedAtomMatchString = defineBuildUncommentedAtomMatchString(opts.allowBareEscapes);
@@ -194,11 +191,6 @@ function validateEmailAddressFormat(address, options) {
         var obsLocalPart = buildObsLocalPartMatchString(atext, escapedCharMatchString, commentMatchString);
         
         return '(' + dotAtom + '|' + qString + '|' + obsLocalPart + ')'; 
-        
-        
-        // Local part can have any number of sections (optionally with comments), each separated by a single . character.
-        var section = buildLocalSectionMatchString(escapedCharMatchString, commentMatchString);
-        return section + String.raw`(\.` + section + ')*';
     }
     
     function defineBuildDotAtomMatchString(allowComments) {
@@ -215,7 +207,7 @@ function validateEmailAddressFormat(address, options) {
     
     function buildDotAtomTextMatchString(atextMatchString) {
         // RFC 5322 3.2.3: dot-atom-text = 1*atext *("." 1*atext)
-        // A series of at least 1 blocks of atext, each at least 1 character long, and each separated
+        // A series of at 1 or more blocks of atext, each at least 1 character long, and each separated
         // by a dot character
         return '(' + atextMatchString + String.raw`+(\.` + atextMatchString + '+)*)';
     }
@@ -248,23 +240,7 @@ function validateEmailAddressFormat(address, options) {
             };
         }
     }
-    
-//    function defineBuildUncommentedAtomMatchString(allowBareEscapes) {
-//        // RFC 5322 3.2.3: atom = [CFWS] 1*atext [CFWS]
-//        // Must not be empty, contains at least 1 atext character. CFWS is not
-//        // handled here.
-//        
-//        if (allowBareEscapes) {
-//            return function(atextMatchString) {
-//                return '((' + ATEXT_MATCH + '|' escapedCharMatchString + ')+)';
-//            };
-//        } else {
-//            return function(ignored) {
-//                return '(' + ATEXT_MATCH + '+)';
-//            };
-//        }
-//    }
-    
+        
     function defineBuildDomainPartMatchString(canHaveDomain, allowComments) {
         if (!canHaveDomain) {
             // No domain part allowed
@@ -442,20 +418,7 @@ function validateEmailAddressFormat(address, options) {
         return '("' + quotedSectionChar + '*")';
     }
     
-    function buildLocalUncommentedSectionMatchString(escapedCharMatchString) {
-        // These characters can appear without being escaped or quoted. Don't include the . here, 
-        // because it's special (can't be first, last, or consecutive) and handled elsewhere.
-        var standardCharSet = String.raw`\`\-a-zA-Z0-9!#$%&'*+/=?^_{|}~`;
-        var standardCharMatchString = '[' + standardCharSet + ']';
-        // Characters that can be either quoted or escaped
-        var quotableCharMatchString = buildQuotableLocalCharMatchString(escapedCharMatchString);
-        
-        // Any section can be either standard (unquoted) or quoted.
-        var standardSection = buildStandardLocalSectionMatchString(standardCharMatchString, escapedCharMatchString);
-        var quotedSection = buildQuotedLocalSectionMatchString(standardCharMatchString, quotableCharMatchString, escapedCharMatchString);
-        return '(' + standardSection + '|' + quotedSection + ')';
-
-    }
+    
     
 //    function buildMustBeQuotedOrEscapedLocalCharMatchString(standardLocalCharSet) {
     function buildQuotableLocalCharMatchString(escapedCharMatchString) {
@@ -474,20 +437,20 @@ function validateEmailAddressFormat(address, options) {
         
     }
     
-    function defineBuildLocalSectionMatchString(allowComments) {
-        
-        
-        if (allowComments) {
-            return function(escapedCharMatchString, commentMatchString) {
-                var bareSectionMatchString = buildLocalUncommentedSectionMatchString(escapedCharMatchString);
-                return '(' + commentMatchString + '*' + bareSectionMatchString + commentMatchString + '*)';
-            };
-        } else {
-            return function(escapedCharMatchString, gnored) {
-                return buildLocalUncommentedSectionMatchString(escapedCharMatchString);
-            };
-        }
-    }
+//    function defineBuildLocalSectionMatchString(allowComments) {
+//        
+//        
+//        if (allowComments) {
+//            return function(escapedCharMatchString, commentMatchString) {
+//                var bareSectionMatchString = buildLocalUncommentedSectionMatchString(escapedCharMatchString);
+//                return '(' + commentMatchString + '*' + bareSectionMatchString + commentMatchString + '*)';
+//            };
+//        } else {
+//            return function(escapedCharMatchString, gnored) {
+//                return buildLocalUncommentedSectionMatchString(escapedCharMatchString);
+//            };
+//        }
+//    }
     
     function defineBuildHostnameMatchString(allowComments) {
         buildHostnameLabelMatchString = defineBuildHostnameLabelMatchString(allowComments);
