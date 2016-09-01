@@ -1,20 +1,14 @@
 function validateEmailAddressFormat(address, options) {
-    
-    "use strict";
-    
     // Functions that may not be needed or that may have different definitions
     // depending on options:
     var checkComments,
         buildLengthLookaheadMatchString,
         buildDomainPartMatchString,
-        buildHostnameMatchString,
         buildDomainLiteralMatchString,
         buildDomainAtomMatchString,
         buildFullAddressMatchString,
         getResult,
-        buildAtomMatchString,
         buildDotAtomMatchString,
-        getAtextMatchStringForLocal,
         buildQuotedStringMatchString,
 
         // Option-dependent values
@@ -43,7 +37,7 @@ function validateEmailAddressFormat(address, options) {
     
     // Compose the regex (stored as a string) to match the entire addresss
     var lengthLookaheadPart = buildLengthLookaheadMatchString(address);
-    var localPart = buildLocalPartMatchString(cfwsMatchString, escapedChar);
+    var localPart = buildLocalPartMatchString(defineLocalFunctions(opts), cfwsMatchString, escapedChar);
     var domainPart = buildDomainPartMatchString ? buildDomainPartMatchString(cfwsMatchString, escapedChar) : '';
     var fullAddress = buildFullAddressMatchString(lengthLookaheadPart, localPart, domainPart);
     
@@ -94,16 +88,76 @@ function validateEmailAddressFormat(address, options) {
     }
     
     function defineFunctions(opts) {
-        getAtextMatchStringForLocal = defineGetAtextMatchStringForLocal(opts.allowBareEscapes);
-        getResult = buildGetResult(opts.returnRegex, opts.allowComments && !opts.useRegexOnly);
+        
+        getResult = defineGetResult(opts.returnRegex, opts.allowComments && !opts.useRegexOnly);
         buildFullAddressMatchString = defineBuildFullAddressMatchString(opts.allowLocalAddresses);
         checkComments = defineCheckComments(opts.allowComments && !opts.useRegexOnly, !opts.allowLocalAddresses);
         buildLengthLookaheadMatchString = defineBuildLengthLookaheadMatchString(opts.allowLocalAddresses);
         buildDomainPartMatchString = defineBuildDomainPartMatchString(opts.allowLocalAddresses >= 0, opts.allowComments);
-        buildAtomMatchString = defineBuildAtomMatchString(opts.allowComments);
         buildDotAtomMatchString = defineBuildDotAtomMatchString(opts.allowComments);
-        buildQuotedStringMatchString = defineBuildQuotedStringMatchString(opts.allowComments);
         
+        //addProperties(buildLocalPartMatchString, defineLocalFunctions(opts));
+    }
+    
+    function defineLocalFunctions(opts) {
+        var result = {
+            getAtextMatchStringForLocal: defineGetAtextMatchStringForLocal(opts.allowBareEscapes),
+            buildLocalAtomMatchString: defineBuildLocalAtomMatchString(opts.allowComments),
+            buildQuotedStringMatchString: defineBuildQuotedStringMatchString(opts.allowComments),
+            buildUncommentedQuotedString: buildUncommentedQuotedString,
+        };
+        return result;
+        
+        
+        function defineGetAtextMatchStringForLocal(allowBareEscapes) {
+            if (allowBareEscapes) {
+                return function(escapedCharMatchString) {
+                    return '(' + ATEXT_STRICT_MATCH + '|' + escapedCharMatchString + ')';
+                };
+            } else {
+                return function(ignored) {
+                    return ATEXT_STRICT_MATCH;
+                };
+            }
+        }
+        
+        function defineBuildLocalAtomMatchString(allowComments) {
+            // RFC 5322 3.2.3: atom = [CFWS] 1*atext [CFWS]
+
+            if (allowComments) {
+                return function(atextMatchString, cfwsMatchString) {
+                    return '(' + cfwsMatchString + '?' + atextMatchString + '+' + cfwsMatchString + '?)';
+                };
+            } else {
+                return function(atextMatchString, ignored) {
+                    return atextMatchString + '+';
+                };
+            }
+        }
+        
+        function defineBuildQuotedStringMatchString(allowComments) {
+            // RFC 5322 3.2.4: quoted-string = [CFWS] DQUOTE *([FWS] qcontent) [FWS] DQUOTE [CFWS]
+
+            if (allowComments) {
+                return function(escapedCharMatchString, cfwsMatchString) {
+                    var baseQuotedString = buildUncommentedQuotedString(escapedCharMatchString);
+                    return '(' + cfwsMatchString + '?' + baseQuotedString + cfwsMatchString + '?)';
+                };
+            } else {
+                return buildUncommentedQuotedString;
+            }
+        }
+        
+        // Not dynamically generated, but used by both constant and dynamic functions, so this
+        // must be accessible here.
+        function buildUncommentedQuotedString(escapedCharMatchString) {
+            // DQUOTE *([FWS] qcontent) [FWS] DQUOTE
+            // qcontent is either qtext or quoted-pair (that is, it's semantically a single character
+            // within the quoted string. Note that the quoted string can be empty aside from the
+            // surrounding double-quotes.
+            var qcontentMatchString = buildQuotableLocalCharMatchString(escapedCharMatchString)
+            return '("(' + FWS_MATCH + '?' + qcontentMatchString + ')*' + FWS_MATCH + '?")'
+        }
     }
     
     function setOptionDependentValues(opts) {
@@ -128,19 +182,8 @@ function validateEmailAddressFormat(address, options) {
        
     }
     
-    function defineGetAtextMatchStringForLocal(allowBareEscapes) {
-        if (allowBareEscapes) {
-            return function(escapedCharMatchString) {
-                return '(' + ATEXT_STRICT_MATCH + '|' + escapedCharMatchString + ')';
-            };
-        } else {
-            return function(ignored) {
-                return ATEXT_STRICT_MATCH;
-            };
-        }
-    }
     
-    function buildGetResult(returnRegex, shouldCheckComments) {
+    function defineGetResult(returnRegex, shouldCheckComments) {
         if (returnRegex) {
             return function(regex, ignored) {
                 return regex;
@@ -178,7 +221,13 @@ function validateEmailAddressFormat(address, options) {
         }
     }
     
-    function buildLocalPartMatchString(commentMatchString, escapedCharMatchString) {
+    function buildLocalPartMatchString(funcs, commentMatchString, escapedCharMatchString) {
+        // Retrieve option-dependent function definitions from funcs
+        for (var i in funcs) {
+            eval('var ' + i +  ' =  funcs[i]');
+        }
+        
+        
         // RFC 5322 3.4.1: local-part = dot-atom / quoted-string / obs-local-part
         
         var atext = getAtextMatchStringForLocal(escapedCharMatchString);
@@ -188,6 +237,31 @@ function validateEmailAddressFormat(address, options) {
         var obsLocalPart = buildObsLocalPartMatchString(atext, escapedCharMatchString, commentMatchString);
         
         return '(' + dotAtom + '|' + qString + '|' + obsLocalPart + ')'; 
+        
+        
+        // local-part-specific functions:
+        function buildLocalDotAtomTextMatchString(atextMatchString) {
+            // RFC 5322 3.2.3: dot-atom-text = 1*atext *("." 1*atext)
+            // A series of at 1 or more blocks of atext, each at least 1 character long, and each separated
+            // by a dot character
+            return '(' + atextMatchString + String.raw`+(\.` + atextMatchString + '+)*)';
+        }
+        
+        function buildObsLocalPartMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString) {
+            // RFC 5322 4.4: obs-local-part = word *("." word)
+            var word = buildWordMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString);
+            return '(' + word + String.raw`(\.` + word + ')*)';
+        }
+    
+        function buildWordMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString) {
+            // RFC 5322 3.2.5: word = atom / quoted-string
+            var atom = buildLocalAtomMatchString(atextMatchString, cfwsMatchString);
+            var qString = buildQuotedStringMatchString(escapedCharMatchString, cfwsMatchString);
+
+            return '(' + atom + '|' + qString + ')';
+        }
+        
+        
     }
     
     function defineBuildDotAtomMatchString(allowComments) {
@@ -203,41 +277,13 @@ function validateEmailAddressFormat(address, options) {
         }
     }
     
-    function buildLocalDotAtomTextMatchString(atextMatchString) {
-        // RFC 5322 3.2.3: dot-atom-text = 1*atext *("." 1*atext)
-        // A series of at 1 or more blocks of atext, each at least 1 character long, and each separated
-        // by a dot character
-        return '(' + atextMatchString + String.raw`+(\.` + atextMatchString + '+)*)';
-    }
     
-    function buildObsLocalPartMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString) {
-        // RFC 5322 4.4: obs-local-part = word *("." word)
-        var word = buildWordMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString);
-        return '(' + word + String.raw`(\.` + word + ')*)';
-    }
     
-    function buildWordMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString) {
-        // RFC 5322 3.2.5: word = atom / quoted-string
-        var atom = buildAtomMatchString(atextMatchString, cfwsMatchString);
-        var qString = buildQuotedStringMatchString(escapedCharMatchString, cfwsMatchString);
-        
-        return '(' + atom + '|' + qString + ')';
-    }
     
-    function defineBuildAtomMatchString(allowComments) {
-        // RFC 5322 3.2.3: atom = [CFWS] 1*atext [CFWS]
-        
-        if (allowComments) {
-            return function(atextMatchString, cfwsMatchString) {
-//                var bareAtom = buildUncommentedAtomMatchString(atextMatchString);
-                return '(' + cfwsMatchString + '?' + atextMatchString + '+' + cfwsMatchString + '?)';
-            };
-        } else {
-            return function(atextMatchString, ignored) {
-                return atextMatchString + '+';
-            };
-        }
-    }
+    
+    
+    
+    
         
     function defineBuildDomainPartMatchString(canHaveDomain, allowComments) {
         if (!canHaveDomain) {
@@ -246,8 +292,8 @@ function validateEmailAddressFormat(address, options) {
         }
         
         // These only need to be defined if the overall buildDomainPartMatchString is defined.
-        buildHostnameMatchString = defineBuildHostnameMatchString(allowComments);
         buildDomainLiteralMatchString = defineBuildDomainLiteralMatchString(allowComments);
+        buildDomainAtomMatchString = defineBuildDomainAtomMatchString(allowComments);
         
         return function(commentMatchString, escapedCharMatchString) {
             // RFC 5322 3.4.1: domain = dot-atom / domain-literal / obs-domain
@@ -259,12 +305,6 @@ function validateEmailAddressFormat(address, options) {
             
             return '(' + dotAtom + '|' + literal + '|' + obsDomain + ')';
             
-//            
-//            // A domain can be either a hostname or a bracketed domain literal.
-//            
-//            var hostnameMatchString = buildHostnameMatchString(commentMatchString);
-//            var literalMatchString = buildDomainLiteralMatchString(escapedCharMatchString, commentMatchString);
-//            return '(' + hostnameMatchString + '|' + literalMatchString + ')';
         };
     }
     
@@ -400,38 +440,9 @@ function validateEmailAddressFormat(address, options) {
         }
     }
     
-    function defineBuildQuotedStringMatchString(allowComments) {
-        // RFC 5322 3.2.4: quoted-string = [CFWS] DQUOTE *([FWS] qcontent) [FWS] DQUOTE [CFWS]
-        
-        if (allowComments) {
-            return function(escapedCharMatchString, cfwsMatchString) {
-                var baseQuotedString = buildUncommentedQuotedString(escapedCharMatchString);
-                return '(' + cfwsMatchString + '?' + baseQuotedString + cfwsMatchString + '?)';
-            };
-        } else {
-            return buildUncommentedQuotedString;
-        }
-    }
-    
-    function buildUncommentedQuotedString(escapedCharMatchString) {
-        // DQUOTE *([FWS] qcontent) [FWS] DQUOTE
-        // qcontent is either qtext or quoted-pair (that is, it's semantically a single character
-        // within the quoted string. Note that the quoted string can be empty aside from the
-        // surrounding double-quotes.
-        var qcontentMatchString = buildQuotableLocalCharMatchString(escapedCharMatchString)
-        return '("(' + FWS_MATCH + '?' + qcontentMatchString + ')*' + FWS_MATCH + '?")'
-    }
-    
-    function buildQuotedLocalSectionMatchString(standardCharMatchString, quotableCharMatchString, escapedCharMatchString) {
-        // A quoted section can contain non-special characters legal in a standard section, plus anything
-        // in mustBeQuotedChar, plus escaped pairs. The string inside the quotes could be zero length.
-        var quotedSectionChar = quotableCharMatchString;
-        return '("' + quotedSectionChar + '*")';
-    }
     
     
-    
-//    function buildMustBeQuotedOrEscapedLocalCharMatchString(standardLocalCharSet) {
+
     function buildQuotableLocalCharMatchString(escapedCharMatchString) {
 //        // These cannot simply be quoted, but must be escaped even when inside quotes
 //        var mustBeEscapedCharSet = String.raw`"\\`;
@@ -448,19 +459,6 @@ function validateEmailAddressFormat(address, options) {
         
     }
     
-    function defineBuildHostnameMatchString(allowComments) {
-        buildDomainAtomMatchString = defineBuildDomainAtomMatchString(allowComments);
-        
-        return function(commentMatchString) {
-            var labelMatchString = buildDomainAtomMatchString(commentMatchString);
-
-            // Domain has ONE or more labels, separated by . chars. (A top-level domain, which has no dots because it
-            // is only a single label, is legal).
-            return labelMatchString + String.raw`(\.` + labelMatchString + ')*';
-        };
-    }
-    
-    //function defineBuildHostnameLabelMatchString(allowComments) {
     function defineBuildDomainAtomMatchString(allowComments) {
         if (allowComments) {
             return function (commentMatchString) {
@@ -472,7 +470,6 @@ function validateEmailAddressFormat(address, options) {
         }
     }
     
-    //function buildHostnameUncommentedLabelMatchString() {
     function buildDomainUncommentedAtomMatchString() {
         // In a hostname domain, an atom in RFC 5322 language corresponds to a label in RFC 1035
         // and RFC 1123 language.
