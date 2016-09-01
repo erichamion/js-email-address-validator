@@ -13,13 +13,11 @@ function validateEmailAddressFormat(address, options) {
 
         // Option-dependent values
         escapedChar,
-        cfwsMatchString;
+        cfwsMatchString,
+        fwsMatchString;
     
     // Constants
     var WSP_MATCH = '( |\t)';
-    var FWS_STRICT_MATCH = '((' + WSP_MATCH + '*' + String.raw`\n)?` + WSP_MATCH + '+)';
-    var FWS_OBS_MATCH = '(' + WSP_MATCH + String.raw`+(\n` + WSP_MATCH + '+)*)';
-    var FWS_MATCH = makeAlternatives(FWS_STRICT_MATCH, FWS_OBS_MATCH);
     var PRINTING_MATCH = '[!-~]';
     var ATEXT_STRICT_MATCH = String.raw`[\`\-a-zA-Z0-9!#$%&'*+/=?^_{|}~]`;
     
@@ -85,6 +83,7 @@ function validateEmailAddressFormat(address, options) {
             allowComments: coalesce(optsWithoutDefaults.allowComments, true),
             allowLocalAddresses: coalesce(optsWithoutDefaults.allowLocalAddresses, 0), // non-zero = allowed. negative = required. 
             separateLocalLabels: coalesce(optsWithoutDefaults.separateLocalLabels, true),
+            allowObsoleteFoldingWhitespace: coalesce(optsWithoutDefaults.allowObsoleteFoldingWhitespace, true),
         }
         
         // Check for conflicting options
@@ -200,7 +199,7 @@ function validateEmailAddressFormat(address, options) {
             // within the quoted string. Note that the quoted string can be empty aside from the
             // surrounding double-quotes.
             var qcontentMatchString = buildQuotableLocalCharMatchString(escapedCharMatchString)
-            return '("(' + FWS_MATCH + '?' + qcontentMatchString + ')*' + FWS_MATCH + '?")'
+            return '("(' + fwsMatchString + '?' + qcontentMatchString + ')*' + fwsMatchString + '?")'
         }
         
         function buildQuotableLocalCharMatchString(escapedCharMatchString) {
@@ -215,7 +214,7 @@ function validateEmailAddressFormat(address, options) {
             // We don't really care whether a character is also legal outside of quoted strings, so our match string
             // is as simple as that definition (which isn't quite as simple as it might seem).
             var allowedPrintingChars = '(' + makeLookahead(String.raw`["\\]`, true) + PRINTING_MATCH + ')';
-            return makeAlternatives(FWS_MATCH, allowedPrintingChars, escapedCharMatchString);
+            return makeAlternatives(fwsMatchString, allowedPrintingChars, escapedCharMatchString);
 
         }
         
@@ -298,17 +297,7 @@ function validateEmailAddressFormat(address, options) {
     }
     
     function setOptionDependentValues(opts) {
-        // A comment can contain nested parentheses, and they are supposed to be properly nested/matching.
-        // All we're checking is whether there is an outer pair that matches. This should not fail any valid
-        // address, but it could pass an invalid address with improperly nested parentheses. We would
-        // need to do more than regex checking to fully test comments.
-        // We only try to match against comments if the options allow comments.
-        if (opts.allowComments) {
-            var commentContent = '(' + FWS_MATCH + '|(' + makeLookahead(String.raw`[^\\]`) + PRINTING_MATCH + '))';
-            var comment = String.raw`(\(` + commentContent +  String.raw`*\))`;
-            
-            cfwsMatchString = '(((' + FWS_MATCH + '?' + comment + ')+' + FWS_MATCH + '?)|' + FWS_MATCH + ')';
-        }
+        
         
         // Escaped characters (quoted-pairs) can occur in unquoted local labels if allowed by options,
         // in comments if comments are allowed, in domain literals, and in quoted strings. Currently,
@@ -316,6 +305,30 @@ function validateEmailAddressFormat(address, options) {
         // but if we ever add options to disallow domain literals and to disallow quoted strings, then
         // there would be a combination of options that doesn't allow any escaped characters.
         escapedChar = String.raw`(\\[\s\S])`;
+        
+        // RFC 5322 3.2.2: FWS = ([*WSP CRLF] 1*WSP) /  obs-FWS
+        // RFC 5322 4.2:   obs-FWS = 1*WSP *(CRLF 1*WSP)
+        // If obsolete syntax is disallowed, then FWS is either just at least one WSP, or any 
+        // amount of WSP surrounding EXACTLY ONE newline as long as the sequence ends with WSP.
+        // The obsolete syntax also allows multiple newlines, as long as the sequence both starts
+        // and ends with WSP and each newline is separated by at least one WSP.
+        var fwsStrictMatch = '((' + WSP_MATCH + '*' + String.raw`\n)?` + WSP_MATCH + '+)';
+        var fwsObsMatch = '(' + WSP_MATCH + String.raw`+(\n` + WSP_MATCH + '+)*)';
+        fwsMatchString = opts.allowObsoleteFoldingWhitespace ?
+            makeAlternatives(fwsStrictMatch, fwsObsMatch) :
+            fwsStrictMatch;
+        
+        // A comment can contain nested parentheses, and they are supposed to be properly nested/matching.
+        // All we're checking is whether there is an outer pair that matches. This should not fail any valid
+        // address, but it could pass an invalid address with improperly nested parentheses. We would
+        // need to do more than regex checking to fully test comments.
+        // We only try to match against comments if the options allow comments.
+        if (opts.allowComments) {
+            var commentContent = '(' + fwsMatchString + '|(' + makeLookahead(String.raw`[^\\]`) + PRINTING_MATCH + '))';
+            var comment = String.raw`(\(` + commentContent +  String.raw`*\))`;
+            
+            cfwsMatchString = '(((' + fwsMatchString + '?' + comment + ')+' + fwsMatchString + '?)|' + fwsMatchString + ')';
+        }
        
     }
     

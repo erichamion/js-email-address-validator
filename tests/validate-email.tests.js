@@ -486,7 +486,7 @@ QUnit.test('validateEmailAddressFormat_CommentsValid_ShouldAccept', function (as
         '(comment)(comment)me(comment comment comment)@(comment)abc(comment)(comment)(comment).(comment)def(comment)',  
         '(comment (nested comment ("third level"!) (another @third level)))me@abc.com',
         'me@abc(comment with a \n folding newline).def',
-        'me(comment\twith spaces, tabs, \n\tand newlines)@example.com',
+        'me(comment\twith spaces, tabs, \n\t\n and \n \n \n newlines)@example.com',
         '()me@abc().def'
         ];
     var results = [];
@@ -1030,5 +1030,30 @@ QUnit.test('validateEmailAddressFormat_NoSeparateLocalLabelsWithInternalComments
     assert.expect(addresses.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.address + '" has disallowed quoted individual labels and should fail');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_StrictFWSMultipleNewlines_ShouldReject', function (assert) {
+
+    // Arrange
+    var addresses = [
+        'abc(comment \n with \n \n multiple newlines)def@example.com',  
+        ];
+    var options = { 
+        allowObsoleteFoldingWhitespace: false
+    };
+    var resultRegex;
+    var results = [];
+
+    // Act
+    resultRegex = validateEmailAddressFormat(null, options);
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.address + '" has invalid whitespace and should fail');
     })
 });

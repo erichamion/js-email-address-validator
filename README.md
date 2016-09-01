@@ -28,6 +28,7 @@ validateEmailAddress(address[, options])
   **allowComments** | **true** | Allow comments in an address if true, disallow if false.
   **allowLocalAddresses** | **0** | If 0, every address must have a local part, an "@", and a domain part. If positive, then addresses with only a local part (no "@" and no domain part) are allowed in addition to full addresses. If negative, then _only_ addresses with only a local part are allowed, and full addresses are not allowed. The comparisons are not strict, so anything that compares like 0 or false will be considered 0, and true will be considered positive.
   **separateLocalLabels** | **true** | If true, each dot-separated label in the local part of an address is treated as an individual subunit. This allows for each label to be quoted or unquoted, as well as for each label to be preceded or followed by CFWS. If false, the entire local part is treated as a single unit. The entire local part must be either quoted or unquoted, and CFWS cannot be next to a dot in the local part.
+  **allowObsoleteFoldingWhitespace** | **true** | If true, Folding Whitespace can contain multiple newlines, each separated by whitespace. If false, Folding Whitespace can contain at most one newline.
 
 ### Return Value
 By default, returns a boolean. If the address parameter is a well-formed email address, returns true. Otherwise, returns false.
