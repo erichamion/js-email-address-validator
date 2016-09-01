@@ -19,7 +19,7 @@ function validateEmailAddressFormat(address, options) {
     var WSP_MATCH = '( |\t)';
     var FWS_STRICT_MATCH = '((' + WSP_MATCH + '*' + String.raw`\n)?` + WSP_MATCH + '+)';
     var FWS_OBS_MATCH = '(' + WSP_MATCH + String.raw`+(\n` + WSP_MATCH + '+)*)';
-    var FWS_MATCH = '(' + FWS_STRICT_MATCH + '|' + FWS_OBS_MATCH + ')';
+    var FWS_MATCH = makeAlternatives(FWS_STRICT_MATCH, FWS_OBS_MATCH);
     var PRINTING_MATCH = '[!-~]';
     var ATEXT_STRICT_MATCH = String.raw`[\`\-a-zA-Z0-9!#$%&'*+/=?^_{|}~]`;
     
@@ -56,6 +56,22 @@ function validateEmailAddressFormat(address, options) {
     
     function makeLookahead(str, negativeLookAhead) {
         return '(?' + (negativeLookAhead ? '!' : '=') + str + ')';
+    }
+    
+    function surroundWithOptional(center, surround) {
+        return '(' + surround + '?' + center + surround + '?)';
+    }
+    
+    function makeAlternatives() {
+        var nonNull = [];
+        for (var idx in arguments) {
+            var arg = arguments[idx];
+            //alert(arguments[arg]);
+            if (arg !== undefined && arg !== null) {
+                nonNull.push(arg);
+            }
+        }
+        return '(' + nonNull.join('|') + ')';
     }
     
     function getOptions(options) {
@@ -114,7 +130,7 @@ function validateEmailAddressFormat(address, options) {
         function defineGetAtextMatchStringForLocal(allowBareEscapes) {
             if (allowBareEscapes) {
                 return function(escapedCharMatchString) {
-                    return '(' + ATEXT_STRICT_MATCH + '|' + escapedCharMatchString + ')';
+                    return makeAlternatives(ATEXT_STRICT_MATCH, escapedCharMatchString);
                 };
             } else {
                 return function(ignored) {
@@ -128,7 +144,8 @@ function validateEmailAddressFormat(address, options) {
 
             if (allowComments) {
                 return function(atextMatchString, cfwsMatchString) {
-                    return '(' + cfwsMatchString + '?' + atextMatchString + '+' + cfwsMatchString + '?)';
+                    var multiAtext = atextMatchString + '+';
+                    return surroundWithOptional(multiAtext, cfwsMatchString);
                 };
             } else {
                 return function(atextMatchString, ignored) {
@@ -143,7 +160,7 @@ function validateEmailAddressFormat(address, options) {
             if (allowComments) {
                 return function(escapedCharMatchString, cfwsMatchString) {
                     var baseQuotedString = buildUncommentedQuotedString(escapedCharMatchString);
-                    return '(' + cfwsMatchString + '?' + baseQuotedString + cfwsMatchString + '?)';
+                    return surroundWithOptional(baseQuotedString, cfwsMatchString);
                 };
             } else {
                 return buildUncommentedQuotedString;
@@ -173,7 +190,7 @@ function validateEmailAddressFormat(address, options) {
             // We don't really care whether a character is also legal outside of quoted strings, so our match string
             // is as simple as that definition (which isn't quite as simple as it might seem).
             var allowedPrintingChars = '(' + makeLookahead(String.raw`["\\]`, true) + PRINTING_MATCH + ')';
-            return '(' + FWS_MATCH + '|' + allowedPrintingChars + '|' + escapedCharMatchString + ')';
+            return makeAlternatives(FWS_MATCH, allowedPrintingChars, escapedCharMatchString);
 
         }
     }
@@ -194,7 +211,7 @@ function validateEmailAddressFormat(address, options) {
             if (allowComments) {
                 return function (commentMatchString) {
                     var bareAtom = buildDomainUncommentedAtomMatchString();
-                    return '(' + commentMatchString + '?' + bareAtom + commentMatchString + '?)';
+                    return surroundWithOptional(bareAtom, commentMatchString);
                 };
             } else {
                 return buildDomainUncommentedAtomMatchString;
@@ -239,7 +256,7 @@ function validateEmailAddressFormat(address, options) {
             // (and possibly some control characters).
             // Escaped characters (quoted-pair) are also allowed.
             var simpleChar = String.raw`[^[\]\\]`;
-            var simpleOrEscapedChar = '(' + simpleChar + '|' + escapedCharMatchString + ')';
+            var simpleOrEscapedChar = makeAlternatives(simpleChar, escapedCharMatchString);
             return String.raw`(\[` + simpleOrEscapedChar + String.raw`*\])`;
         }
 
@@ -321,7 +338,7 @@ function validateEmailAddressFormat(address, options) {
         var qString = buildQuotedStringMatchString(escapedCharMatchString, commentMatchString);
         var obsLocalPart = buildObsLocalPartMatchString(atext, escapedCharMatchString, commentMatchString);
         
-        return '(' + dotAtom + '|' + qString + '|' + obsLocalPart + ')'; 
+        return makeAlternatives(dotAtom, qString, obsLocalPart); 
         
         
         // local-part-specific functions:
@@ -343,7 +360,7 @@ function validateEmailAddressFormat(address, options) {
             var atom = buildLocalAtomMatchString(atextMatchString, cfwsMatchString);
             var qString = buildQuotedStringMatchString(escapedCharMatchString, cfwsMatchString);
 
-            return '(' + atom + '|' + qString + ')';
+            return makeAlternatives(atom, qString);
         }
         
         
@@ -370,7 +387,7 @@ function validateEmailAddressFormat(address, options) {
             var literal = buildDomainLiteralMatchString(escapedCharMatchString, commentMatchString);
             var obsDomain = buildObsDomainMatchString(commentMatchString);
             
-            return '(' + dotAtom + '|' + literal + '|' + obsDomain + ')';
+            return makeAlternatives(dotAtom, literal, obsDomain);
             
             
             // domain-part-specific functions
@@ -397,9 +414,8 @@ function validateEmailAddressFormat(address, options) {
     function defineBuildDotAtomMatchString(allowComments) {
         // RFC 5322 3.2.3: dot-atom = [CFWS] dot-atom-text [CFWS]
         if (allowComments) {
-            return function(dotAtomTextMatchString, cfwsMatchString) {
-                return '(' + cfwsMatchString + '?' + dotAtomTextMatchString + cfwsMatchString + '?)';
-            };
+            // center=dotAtomTextMatchString, surround=cfwsMatchString
+            return surroundWithOptional;
         } else {
             return function(dotAtomTextMatchString) {
                 return dotAtomTextMatchString;
