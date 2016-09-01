@@ -83,7 +83,8 @@ function validateEmailAddressFormat(address, options) {
             returnRegex: coalesce(optsWithoutDefaults.returnRegex, false),
             allowBareEscapes: coalesce(optsWithoutDefaults.allowBareEscapes, false),
             allowComments: coalesce(optsWithoutDefaults.allowComments, true),
-            allowLocalAddresses: coalesce(optsWithoutDefaults.allowLocalAddresses, 0) // non-zero = allowed. negative = required. 
+            allowLocalAddresses: coalesce(optsWithoutDefaults.allowLocalAddresses, 0), // non-zero = allowed. negative = required. 
+            separateLocalLabels: coalesce(optsWithoutDefaults.separateLocalLabels, true),
         }
         
         // Check for conflicting options
@@ -116,11 +117,18 @@ function validateEmailAddressFormat(address, options) {
     }
     
     function defineLocalPartFunctions(opts) {
+        var getAtextMatchStringForLocal = defineGetAtextMatchStringForLocal(opts.allowBareEscapes);
+        var buildLocalAtomMatchString = defineBuildLocalAtomMatchString(opts.allowComments);
+        var buildQuotedStringMatchString = defineBuildQuotedStringMatchString(opts.allowComments);
+        var buildObsLocalPartMatchString = defineBuildObsLocalPartMatchString(opts.separateLocalLabels);
+        var buildLocalAtomMatchString = defineBuildLocalAtomMatchString(opts.allowComments);
+
         var result = {
-            getAtextMatchStringForLocal: defineGetAtextMatchStringForLocal(opts.allowBareEscapes),
-            buildLocalAtomMatchString: defineBuildLocalAtomMatchString(opts.allowComments),
-            buildQuotedStringMatchString: defineBuildQuotedStringMatchString(opts.allowComments),
-            
+            getAtextMatchStringForLocal: getAtextMatchStringForLocal,
+            buildLocalAtomMatchString: buildLocalAtomMatchString,
+            buildQuotedStringMatchString: buildQuotedStringMatchString,
+            buildObsLocalPartMatchString: buildObsLocalPartMatchString,
+            buildLocalAtomMatchString: buildLocalAtomMatchString,
             
             buildUncommentedQuotedString: buildUncommentedQuotedString,
         };
@@ -167,6 +175,23 @@ function validateEmailAddressFormat(address, options) {
             }
         }
         
+        function defineBuildObsLocalPartMatchString(allowObsolete) {
+            if (!allowObsolete) {
+                return function() {
+                    return null;
+                }
+            } else {
+            
+                return function(atextMatchString, escapedCharMatchString, cfwsMatchString) {
+                    // RFC 5322 4.4: obs-local-part = word *("." word)
+                    var word = buildWordMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString);
+                    return '(' + word + String.raw`(\.` + word + ')*)';
+                };
+            }
+            
+            
+        }
+        
         // Not dynamically generated, but used by both constant and dynamic functions, so this
         // must be accessible here.
         function buildUncommentedQuotedString(escapedCharMatchString) {
@@ -192,6 +217,15 @@ function validateEmailAddressFormat(address, options) {
             var allowedPrintingChars = '(' + makeLookahead(String.raw`["\\]`, true) + PRINTING_MATCH + ')';
             return makeAlternatives(FWS_MATCH, allowedPrintingChars, escapedCharMatchString);
 
+        }
+        
+        // Not dynamically generated, but only used by local dynamically generated functions
+        function buildWordMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString) {
+            // RFC 5322 3.2.5: word = atom / quoted-string
+            var atom = buildLocalAtomMatchString(atextMatchString, cfwsMatchString);
+            var qString = buildQuotedStringMatchString(escapedCharMatchString, cfwsMatchString);
+
+            return makeAlternatives(atom, qString);
         }
     }
     
@@ -349,19 +383,9 @@ function validateEmailAddressFormat(address, options) {
             return '(' + atextMatchString + String.raw`+(\.` + atextMatchString + '+)*)';
         }
         
-        function buildObsLocalPartMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString) {
-            // RFC 5322 4.4: obs-local-part = word *("." word)
-            var word = buildWordMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString);
-            return '(' + word + String.raw`(\.` + word + ')*)';
-        }
+        
     
-        function buildWordMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString) {
-            // RFC 5322 3.2.5: word = atom / quoted-string
-            var atom = buildLocalAtomMatchString(atextMatchString, cfwsMatchString);
-            var qString = buildQuotedStringMatchString(escapedCharMatchString, cfwsMatchString);
-
-            return makeAlternatives(atom, qString);
-        }
+        
         
         
     }
@@ -422,17 +446,6 @@ function validateEmailAddressFormat(address, options) {
             }
         }
     }
-    
-    
-    
-    
-    
-    
-    
-    
-        
-    
-    
     
     
     

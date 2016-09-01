@@ -27,6 +27,7 @@ validateEmailAddress(address[, options])
   **allowBareEscapes** | **false** | If and only if true, a backslash character can be used to escape normally illegal characters in an unquoted local address label. Backslash escapes can always be used in comments, quoted strings, and bracketed domain literals, regardless of this option.
   **allowComments** | **true** | Allow comments in an address if true, disallow if false.
   **allowLocalAddresses** | **0** | If 0, every address must have a local part, an "@", and a domain part. If positive, then addresses with only a local part (no "@" and no domain part) are allowed in addition to full addresses. If negative, then _only_ addresses with only a local part are allowed, and full addresses are not allowed. The comparisons are not strict, so anything that compares like 0 or false will be considered 0, and true will be considered positive.
+  **separateLocalLabels** | **true** | If true, each dot-separated label in the local part of an address is treated as an individual subunit. This allows for each label to be quoted or unquoted, as well as for each label to be preceded or followed by CFWS. If false, the entire local part is treated as a single unit. The entire local part must be either quoted or unquoted, and CFWS cannot be next to a dot in the local part.
 
 ### Return Value
 By default, returns a boolean. If the address parameter is a well-formed email address, returns true. Otherwise, returns false.
@@ -139,7 +140,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
 
 #### Notes for RFC 5321 compatibility
 - Does not allow comments. (already an option)
-- If the local part has a quoted string, the quoted string must comprise the entire local part.
+- If the local part has a quoted string, the quoted string must comprise the entire local part. (already an option)
 - Unclear about backslash escapes in the local part. The definition only shows quoted-pair as part of quoted-string, but the text implies it can occur elsewhere. (already an option)
 - Only ASCII graphic characters and space can be backslash escaped. Other whitespace or control characters, including newline, are not allowed. (could be added)
 - Only ASCII graphic characters and space can be in a quoted string. Other whitespace or control characters, including newline are not allowed. (could be added)
@@ -152,11 +153,10 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - Printing characters are 0x21-0x7E (!-~)
 - WSP = space or horizontal tab
 - Comment can contain FWS and/or printable ASCII (excluding parentheses and backslash) -- implemented
-- FWS includes WSP and/or newline, always ends with WSP, but see next point
 - Quoted-string can contain FWS, printable ASCII (excluding double-quote and backslash), and quoted-pair -- implemented
-- Quoted strings on a per-label basis are allowed but obsolete
+- Quoted strings on a per-label basis are allowed but obsolete -- separateLocalLabels option implements this
 - Domain literals can contain FWS and printable ASCII (excluding square brackets and backslash)
 - In addition, quoted-pair (backslash escape) and non-whitespace control characters in domain literal are allowed but obsolete. This means every character besides unescaped brackets/backslash is legal, as I've implemented.
-- Comments/FWS between period-separated elements of local-part and domain are allowed but obsolete.
+- Comments/FWS between period-separated elements of local-part and domain are allowed but obsolete. -- separateLocalLabels option implements this
 - Quoted-pair can have non-WS control characters, but this is obsolete.
 - Quoted-pair does not seem to be allowed outside of comment and quoted-string (and obsolete in domain literal)
