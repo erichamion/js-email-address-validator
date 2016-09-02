@@ -359,7 +359,7 @@ QUnit.test('validateEmailAddressFormat_DomainLiteralValid_ShouldAccept', functio
     assert.expect(1);
 
     // Arrange
-    var addr = 'me@[This is a valid domain literal. <Really>, it is!\nTrust me. (It isn\'t meaningful in any way, though.)]';
+    var addr = 'me@[This is a valid domain literal\x02. <Really>, it is! \n Trust me. (It isn\'t meaningful in any way\\], though.)\\\\]';
 
     // Act
     var result = validateEmailAddressFormat(addr);
@@ -900,7 +900,7 @@ QUnit.test('validateEmailAddressFormat_ReturnRegex_ShouldMatchValidAddresses', f
         'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkl@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghi',      
         "!#$%&'*+-/=?^_`{|}~@example.com",        
         '"abc\\"@\\"def"@example.com',        
-        'me@[This is a valid domain literal. <Really>, it is!\nTrust me. (It isn\'t meaningful in any way, though.)]',        
+        'me@[This is a valid domain literal\x02. <Really>, it is! \n Trust me. (It isn\'t meaningful in any way\\], though.)\\\\]',        
         '(comment (nested comment ("third level"!) (another @third level)))me@abc.com',
         'me@[127.0.0.1]'
         ];
@@ -1109,5 +1109,58 @@ QUnit.test('validateEmailAddressFormat_StrictFWSMultipleNewlines_ShouldReject', 
     assert.expect(addresses.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.address + '" has invalid whitespace and should fail');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_NoDomainLiteralValid_ShouldAccept', function (assert) {
+
+    // Arrange
+    var addresses = [
+        'me@[domain literal]',
+        'me@[domain literal \n with control FWS that contains newline]',
+        'me@(comment)[domain](comment)',  
+        ];
+    var options = { 
+        allowDomainLiteralEscapes: false
+    };
+    var resultRegex;
+    var results = [];
+
+    // Act
+    resultRegex = validateEmailAddressFormat(null, options);
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.address + '" is valid and should pass');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_NoDomainLiteralEscapesHasEscapeOrControl_ShouldReject', function (assert) {
+
+    // Arrange
+    var addresses = [
+        'me@[domain literal \\] with escape]',
+        'me@[domain literal \x02 with control character]',  
+        ];
+    var options = { 
+        allowDomainLiteralEscapes: false
+    };
+    var resultRegex;
+    var results = [];
+
+    // Act
+    resultRegex = validateEmailAddressFormat(null, options);
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.address + '" has a domain literal with escaped characters or control characters when those have been disallowed and should fail');
     })
 });

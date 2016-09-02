@@ -14,7 +14,8 @@ function validateEmailAddressFormat(address, options) {
         // Option-dependent values
         escapedChar,
         cfwsMatchString,
-        fwsMatchString;
+        fwsMatchString,
+        obsNoWsCtlMatchString;
     
     // Constants
     var WSP_MATCH = '( |\t)';
@@ -85,6 +86,7 @@ function validateEmailAddressFormat(address, options) {
             separateLocalLabels: coalesce(optsWithoutDefaults.separateLocalLabels, true),
             separateDomainLabels: coalesce(optsWithoutDefaults.separateDomainLabels, true),
             allowObsoleteFoldingWhitespace: coalesce(optsWithoutDefaults.allowObsoleteFoldingWhitespace, true),
+            allowDomainLiteralEscapes: coalesce(optsWithoutDefaults.allowDomainLiteralEscapes, true),
         }
         
         // Check for conflicting options
@@ -235,6 +237,7 @@ function validateEmailAddressFormat(address, options) {
         var buildDomainAtomMatchString = defineBuildDomainAtomMatchString(opts.allowComments);
         var buildDomainLiteralMatchString = defineBuildDomainLiteralMatchString(opts.allowComments);
         var buildObsDomainMatchString = defineBuildObsDomainMatchString(opts.separateDomainLabels);
+        var buildDtextMatchString = defineBuildDtextMatchString(opts.allowDomainLiteralEscapes);
  
         var buildDomainUncommentedAtomMatchString = buildDomainUncommentedAtomMatchString;
         
@@ -259,6 +262,8 @@ function validateEmailAddressFormat(address, options) {
         }
         
         function defineBuildDomainLiteralMatchString(allowComments) {
+            // RFC 5322 3.4.1: domain-literal = [CFWS] "[" *([FWS] dtext) [FWS] "]" [CFWS]
+            
             if (allowComments) {
                 return function( escapedCharMatchString, commentMatchString) {
                     var bareDomain = buildUncommentedDomainLiteralMatchString(escapedCharMatchString);
@@ -281,6 +286,23 @@ function validateEmailAddressFormat(address, options) {
                 // characters, always use the strict atext.
                 var atom = buildDomainAtomMatchString(cfwsMatchString);
                 return '(' + atom + String.raw`(\.` + atom + ')*)';
+            }
+        }
+        
+        function defineBuildDtextMatchString(allowEscapes) {
+            // RFC 5322 3.4.1: dtext = %d33-90 / %d94-126 / obs-dtext
+            // If obs-dtext is not allowed, this is equivalent to the printing low-ASCII
+            // characters excluding square brackets and backslash.
+            var baseDtext = '(' + makeLookahead(String.raw`[\[\]\\]`, true) + PRINTING_MATCH + ')';
+            if (allowEscapes) {
+                return function(escapeCharMatchString) {
+                    // RFC 5322 4.4: obs-dtext = obs-NO-WS-CTL / quoted-pair
+                    return makeAlternatives(baseDtext, obsNoWsCtlMatchString, escapeCharMatchString);
+                }
+            } else {
+                return function() {
+                    return baseDtext;
+                }
             }
         }
     
@@ -307,15 +329,24 @@ function validateEmailAddressFormat(address, options) {
             // but according to RFC2282 3.4.1 the only illegal unescaped characters between the brackets are [, ], and \ 
             // (and possibly some control characters).
             // Escaped characters (quoted-pair) are also allowed.
-            var simpleChar = String.raw`[^[\]\\]`;
-            var simpleOrEscapedChar = makeAlternatives(simpleChar, escapedCharMatchString);
-            return String.raw`(\[` + simpleOrEscapedChar + String.raw`*\])`;
+            
+            
+            // RFC 5322 3.4.1: [CFWS] "[" *([FWS] dtext) [FWS] "]" [CFWS]
+            // Don't worry about the CFWS here. That is handled at a higher level.
+            return String.raw`(\[(` + fwsMatchString + '?' + buildDtextMatchString(escapedCharMatchString) + ')*' + fwsMatchString + String.raw`?\])`;
+            
+//            var simpleChar = String.raw`[^[\]\\]`;
+//            var simpleOrEscapedChar = makeAlternatives(simpleChar, escapedCharMatchString);
+//            return String.raw`(\[` + simpleOrEscapedChar + String.raw`*\])`;
         }
 
 
     }
     
     function setOptionDependentValues(opts) {
+        // RFC 5322 4.1: obs-NO-WS-CTL = %d1-8 / %d11 / %d12 / %d14-31 / %d127
+        // Control characters that do not include carriage return, line feed, or whitespace
+        obsNoWsCtlMatchString = String.raw`[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]`;
         
         
         // Escaped characters (quoted-pairs) can occur in unquoted local labels if allowed by options,

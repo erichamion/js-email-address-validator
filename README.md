@@ -30,6 +30,7 @@ validateEmailAddress(address[, options])
   **separateLocalLabels** | **true** | If true, each dot-separated label in the local part of an address is treated as an individual subunit. This allows for each label to be quoted or unquoted, as well as for each label to be preceded or followed by CFWS. If false, the entire local part is treated as a single unit. The entire local part must be either quoted or unquoted, and CFWS cannot be next to a dot in the local part.
   **separateDomainLabels** | **true** | If true, each dot-separated label in a hostname domain can be preceded or followed by CFWS. If false, CFWS can only occur before or after the entire domain.
   **allowObsoleteFoldingWhitespace** | **true** | If true, Folding Whitespace can contain multiple newlines, each separated by whitespace. If false, Folding Whitespace can contain at most one newline.
+  **allowDomainLiteralEscapes** | **true** | If true, the text between the brackets in a domain literal can contain any low-ASCII character (including control characters) aside from square brackets and backslash, and it can contain backslash-escaped characters (which provides a way to include square brackets and backslash). If false, the text between the brackets can only be be FWS and printing characters excluding the square brackets and backslash, and it cannot contain escaped characters.
 
 ### Return Value
 By default, returns a boolean. If the address parameter is a well-formed email address, returns true. Otherwise, returns false.
@@ -103,9 +104,9 @@ The rules for a valid email address are surprisingly complex and are scattered t
   - The domain part can be either a host name or a domain literal.
   - Domain Literal:
     - A domain literal starts and ends with square brackets.
-    - The content between the brackets should be the host's literal location on the network (typically an IP address), but nearly any character is allowed. The only disallowed unescaped characters are square brackets and backslash.
-    - Backslash escapes are allowed and can be used to insert a backslash or square bracket.
-    - According to the validator at isemail.info, a domain literal can be preceded or followed by comments. (I need to review the RFCs to see whether this is accurate, but I fully expect it is accurate)
+    - The content between the brackets should be the host's literal location on the network (typically an IP address), but nearly any character is allowed. The only disallowed unescaped characters are square brackets and backslash. Control characters are considered obsolete, and these can be disallowed with the `allowDomainLiteralEscapes` option.
+    - Backslash escapes are allowed and can be used to insert a backslash or square bracket. This behavior can be changed with the `allowDomainLiteralEscapes` option.
+    - A domain literal can be preceded or followed by comments.
   - Host Name:
     - Each label within a host name can be up to 63 characters long.
     - The entire host name can be up to 255 characters long, but this would not result in a usable email address.
@@ -158,7 +159,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - Quoted-string can contain FWS, printable ASCII (excluding double-quote and backslash), and quoted-pair -- implemented
 - Quoted strings on a per-label basis are allowed but obsolete -- separateLocalLabels option implements this
 - Domain literals can contain FWS and printable ASCII (excluding square brackets and backslash)
-- In addition, quoted-pair (backslash escape) and non-whitespace control characters in domain literal are allowed but obsolete. This means every character besides unescaped brackets/backslash is legal, as I've implemented.
+- In addition, quoted-pair (backslash escape) and non-whitespace control characters in domain literal are allowed but obsolete. This means every character besides unescaped brackets/backslash is legal, as I've implemented. -- allowDomainLiteralEscapes option implements this
 - Comments/FWS between period-separated elements of local-part and domain are allowed but obsolete. -- separateLocalLabels option implements this
 - Quoted-pair can have non-WS control characters, but this is obsolete.
 - Quoted-pair does not seem to be allowed outside of comment and quoted-string (and obsolete in domain literal)
