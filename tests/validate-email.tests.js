@@ -959,7 +959,8 @@ QUnit.test('validateEmailAddressFormat_NoSeparateLocalLabelsValid_ShouldAllow', 
         '"entirelocalpartisquoted"@example.com',
         '(commentbefore)abc.def@example.com',
         'abc.def(comment after)@example.com',
-        '"quotedaddress"(with comments)@example.com', 
+        '"quotedaddress"(with comments)@example.com',
+        'me@example(domain comment).com', 
         ];
     var options = { 
         separateLocalLabels: false
@@ -1030,6 +1031,59 @@ QUnit.test('validateEmailAddressFormat_NoSeparateLocalLabelsWithInternalComments
     assert.expect(addresses.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.address + '" has disallowed quoted individual labels and should fail');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_NoSeparateDomainLabelsValid_ShouldAllow', function (assert) {
+
+    // Arrange
+    var addresses = [
+        'addresswithoutquotes@example.com',     
+        'abc.def@(comment before)example.com',
+        'abc.def@example.com(comment after)',
+        'abc.(local comment)def@example.com',
+        ];
+    var options = { 
+        separateDomainLabels: false
+    };
+    var resultRegex;
+    var results = [];
+
+    // Act
+    resultRegex = validateEmailAddressFormat(null, options);
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.address + '" is valid and should pass');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_NoSeparateDomainLabelsWithInternalComments_ShouldReject', function (assert) {
+
+    // Arrange
+    var addresses = [
+        'abc.def@example(comment).com',  
+        ];
+    var options = { 
+        separateDomainLabels: false
+    };
+    var resultRegex;
+    var results = [];
+
+    // Act
+    resultRegex = validateEmailAddressFormat(null, options);
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.address + '" has disallowed CFWS between individual domain labels and should fail');
     })
 });
 

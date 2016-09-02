@@ -3,9 +3,9 @@ function validateEmailAddressFormat(address, options) {
     // depending on options:
     var checkComments,
         buildLengthLookaheadMatchString,
-        buildDomainPartMatchString,
+        //buildDomainPartMatchString,
         //buildDomainLiteralMatchString,
-        buildDomainAtomMatchString,
+        //buildDomainAtomMatchString,
         buildFullAddressMatchString,
         getResult,
         buildDotAtomMatchString,
@@ -83,6 +83,7 @@ function validateEmailAddressFormat(address, options) {
             allowComments: coalesce(optsWithoutDefaults.allowComments, true),
             allowLocalAddresses: coalesce(optsWithoutDefaults.allowLocalAddresses, 0), // non-zero = allowed. negative = required. 
             separateLocalLabels: coalesce(optsWithoutDefaults.separateLocalLabels, true),
+            separateDomainLabels: coalesce(optsWithoutDefaults.separateDomainLabels, true),
             allowObsoleteFoldingWhitespace: coalesce(optsWithoutDefaults.allowObsoleteFoldingWhitespace, true),
         }
         
@@ -231,10 +232,16 @@ function validateEmailAddressFormat(address, options) {
     function defineDomainPartFunctions(opts) {
         if (opts.allowLocalAddresses < 0) return null;
         
+        var buildDomainAtomMatchString = defineBuildDomainAtomMatchString(opts.allowComments);
+        var buildDomainLiteralMatchString = defineBuildDomainLiteralMatchString(opts.allowComments);
+        var buildObsDomainMatchString = defineBuildObsDomainMatchString(opts.separateDomainLabels);
+ 
+        var buildDomainUncommentedAtomMatchString = buildDomainUncommentedAtomMatchString;
+        
         var result = {
-            buildDomainAtomMatchString: defineBuildDomainAtomMatchString(opts.allowComments),
-            buildDomainLiteralMatchString: defineBuildDomainLiteralMatchString(opts.allowComments),
-            
+            buildDomainAtomMatchString: buildDomainAtomMatchString,
+            buildDomainLiteralMatchString: buildDomainLiteralMatchString,
+            buildObsDomainMatchString: buildObsDomainMatchString,
             
             buildDomainUncommentedAtomMatchString: buildDomainUncommentedAtomMatchString,
         };
@@ -263,6 +270,18 @@ function validateEmailAddressFormat(address, options) {
                 };
             }
             
+        }
+        
+        function defineBuildObsDomainMatchString(allowObsoleteDomain) {
+            if (!allowObsoleteDomain) return null;
+            
+            return function(cfwsMatchString) {
+                // RFC 5322 4.4: obs-domain = atom *("." atom)
+                // Dot-separated list of one or more atoms. Because there is no option for escaped
+                // characters, always use the strict atext.
+                var atom = buildDomainAtomMatchString(cfwsMatchString);
+                return '(' + atom + String.raw`(\.` + atom + ')*)';
+            }
         }
     
         
@@ -422,7 +441,7 @@ function validateEmailAddressFormat(address, options) {
             // elsewhere, so we can't use the same dot-atom definition as for the local part.
             var dotAtom = buildDotAtomMatchString(buildDomainDotAtomTextMatchString(ATEXT_STRICT_MATCH), commentMatchString);
             var literal = buildDomainLiteralMatchString(escapedCharMatchString, commentMatchString);
-            var obsDomain = buildObsDomainMatchString(commentMatchString);
+            var obsDomain = buildObsDomainMatchString && buildObsDomainMatchString(commentMatchString);
             
             return makeAlternatives(dotAtom, literal, obsDomain);
             
@@ -437,13 +456,7 @@ function validateEmailAddressFormat(address, options) {
                 return '(' + atom + String.raw`(\.` + atom + ')*)';
             }
             
-            function buildObsDomainMatchString(cfwsMatchString) {
-                // RFC 5322 4.4: obs-domain = atom *("." atom)
-                // Dot-separated list of one or more atoms. Because there is no option for escaped
-                // characters, always use the strict atext.
-                var atom = buildDomainAtomMatchString(cfwsMatchString);
-                return '(' + atom + String.raw`(\.` + atom + ')*)';
-            }
+            
             
         };
     }
