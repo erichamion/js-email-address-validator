@@ -490,7 +490,8 @@ QUnit.test('validateEmailAddressFormat_CommentsValid_ShouldAccept', function (as
         '(comment (nested comment ("third level"!) (another @third level)))me@abc.com',
         'me@abc(comment with a \n folding newline).def',
         'me(comment\twith spaces, tabs, \n\t\n and \n \n \n newlines)@example.com',
-        '()me@abc().def'
+        '()me@abc().def',
+        'me(comment with \x03 control character)@examle.com',
         ];
     var results = [];
 
@@ -593,7 +594,6 @@ QUnit.test('validateEmailAddressFormat_CommentsInvalidFWS_ShouldReject', functio
         '(comment with \nnewline not followed by space or tab)abc@abc.def',  
         'me@(inner comment) comment)after',
         'me(comment.has(nested inner comment).and starts.before@and.has.another(nested inner).but.ends.after.the.at)def.com',
-        'me(comment with \x03 control character)@examle.com',
         ];
     var results = [];
 
@@ -1174,7 +1174,7 @@ QUnit.test('validateEmailAddressFormat_QuotedControlCharactersDisallowed_ShouldR
 
     // Arrange
     var addresses = [
-        'abc\x02def@example.com',
+        '"abc\x02def"@example.com',
         ];
     var options = { allowQuotedControlCharacters: false };
     var results = [];
@@ -1188,5 +1188,47 @@ QUnit.test('validateEmailAddressFormat_QuotedControlCharactersDisallowed_ShouldR
     assert.expect(addresses.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.address + '" has control characters in a quoted string but disallows this syntax and should fail');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_EscapedControlCharactersDisallowed_ShouldReject', function (assert) {
+
+    // Arrange
+    var addresses = [
+        'abc\\\x02def@example.com',
+        ];
+    var options = { allowEscapedControlCharacters: false, allowBareEscapes: true };
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.address + '" has escaped control characters but disallows this syntax and should fail');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_DisallowCommentControlChars_ShouldReject', function (assert) {
+
+    // Arrange
+    var addresses = [
+        'me(comment with \x03 control character)@examle.com',
+        ];
+    var options = { allowControlCharactersInComments: false };
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.address + '" has control characters in a comment but disallows this syntax and should fail');
     })
 });

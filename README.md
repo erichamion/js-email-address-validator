@@ -32,6 +32,7 @@ validateEmailAddress(address[, options])
   **allowObsoleteFoldingWhitespace** | **true** | If true, Folding Whitespace can contain multiple newlines, each separated by whitespace. If false, Folding Whitespace can contain at most one newline.
   **allowDomainLiteralEscapes** | **true** | If true, the text between the brackets in a domain literal can contain any low-ASCII character (including control characters) aside from square brackets and backslash, and it can contain backslash-escaped characters (which provides a way to include square brackets and backslash). If false, the text between the brackets can only be be FWS and printing characters excluding the square brackets and backslash, and it cannot contain escaped characters.
   **allowQuotedControlCharacters** | **true** | If and only if true, a quoted string within the local part of an address can contain non-printing, non-whitespace ASCII control characters.
+  **allowControlCharactersInComments** | **true** | If and only if true, a comment can contain non-printing, non-whitespace ASCII control characters.
 
 ### Return Value
 By default, returns a boolean. If the address parameter is a well-formed email address, returns true. Otherwise, returns false.
@@ -85,7 +86,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - Comment:
   - According to the validator at isemail.info, multiple comments can appear in succession. (I need to review the RFCs to see whether this is correct, but I've allowed this)
   - A comment is surrounded by parentheses.
-  - Valid unescaped characters in a comment are folding whitespace and any printing character, except for backslash and parentheses (but see the next point).
+  - Valid unescaped characters in a comment are folding whitespace, control characters and any printing character, except for backslash and parentheses (but see the next point). This behavior can be changed with the `allowControlCharactersInComments` option.
   - A comment can contain nested comments, each surrounded by parentheses. The parentheses must properly nest and match. **Note:** If the option `useRegexOnly` is true, this cannot be properly validated. In this case, valid comments will be accepted correctly, but some invalid comments will also be accepted.
   - Backslash escapes are allowed inside a comment, and this can be used to insert a parenthesis or backslash.
 - CFWS:

@@ -65,7 +65,6 @@ function validateEmailAddressFormat(address, options) {
         var nonNull = [];
         for (var idx in arguments) {
             var arg = arguments[idx];
-            //alert(arguments[arg]);
             if (arg !== undefined && arg !== null) {
                 nonNull.push(arg);
             }
@@ -88,6 +87,8 @@ function validateEmailAddressFormat(address, options) {
             allowObsoleteFoldingWhitespace: coalesce(optsWithoutDefaults.allowObsoleteFoldingWhitespace, true),
             allowDomainLiteralEscapes: coalesce(optsWithoutDefaults.allowDomainLiteralEscapes, true),
             allowQuotedControlCharacters: coalesce(optsWithoutDefaults.allowQuotedControlCharacters, true),
+            allowEscapedControlCharacters: coalesce(optsWithoutDefaults.allowEscapedControlCharacters, true),
+            allowControlCharactersInComments: coalesce(optsWithoutDefaults.allowControlCharactersInComments, true),
         }
         
         // Check for conflicting options
@@ -233,23 +234,6 @@ function validateEmailAddressFormat(address, options) {
             return makeAlternatives(buildQtextMatchString(), escapedCharMatchString);
         }
         
-        
-//        function buildQuotableLocalCharMatchString(escapedCharMatchString) {
-//    //        // These cannot simply be quoted, but must be escaped even when inside quotes
-//    //        var mustBeEscapedCharSet = String.raw`"\\`;
-//    //
-//    //        // Anything that isn't standard or in mustBeEscapedCharSet can be either escaped or quoted.
-//    //        return '[^' + standardLocalCharSet + mustBeEscapedCharSet + ']';
-//
-//            // The above comment is not true. Quoted string can have Folding Whitespace, printing characters
-//            // (except for " and \), and escaped characters.
-//            // We don't really care whether a character is also legal outside of quoted strings, so our match string
-//            // is as simple as that definition (which isn't quite as simple as it might seem).
-//            var allowedPrintingChars = '(' + makeLookahead(String.raw`["\\]`, true) + PRINTING_MATCH + ')';
-//            return makeAlternatives(fwsMatchString, allowedPrintingChars, escapedCharMatchString);
-//
-//        }
-        
         // Not dynamically generated, but only used by local dynamically generated functions
         function buildWordMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString) {
             // RFC 5322 3.2.5: word = atom / quoted-string
@@ -383,7 +367,17 @@ function validateEmailAddressFormat(address, options) {
         // there is always a possibility of having an address part that could contain escaped characters,
         // but if we ever add options to disallow domain literals and to disallow quoted strings, then
         // there would be a combination of options that doesn't allow any escaped characters.
-        escapedChar = String.raw`(\\[\s\S])`;
+        // RFC 5322 3.2.1: quoted-pair = ("\" (VCHAR / WSP)) / obs-qp
+        // The VCHAR definition is taken from RFC5234, and it is simply the set of printing characters.
+        if (opts.allowEscapedControlCharacters) {
+            // RFC 5322 4.1: obs-qp = "\" (%d0 / obs-NO-WS-CTL / LF / CR)
+            // This, combined with the quoted-pair definition, can be simplified as:
+            // Quoted-pair is backslash followed by ANYTHING (including control characters, null, bare
+            // linefeed, and bare carriage return).
+            escapedChar = String.raw`(\\[\s\S])`;
+        } else {
+            escapedChar = String.raw`(\\` + makeAlternatives(PRINTING_MATCH, WSP_MATCH) + ')';
+        }
         
         // RFC 5322 3.2.2: FWS = ([*WSP CRLF] 1*WSP) /  obs-FWS
         // RFC 5322 4.2:   obs-FWS = 1*WSP *(CRLF 1*WSP)
@@ -398,13 +392,28 @@ function validateEmailAddressFormat(address, options) {
             fwsStrictMatch;
         
         // A comment can contain nested parentheses, and they are supposed to be properly nested/matching.
-        // All we're checking is whether there is an outer pair that matches. This should not fail any valid
-        // address, but it could pass an invalid address with improperly nested parentheses. We would
-        // need to do more than regex checking to fully test comments.
-        // We only try to match against comments if the options allow comments.
+        // A regex cannot fully verify such a nested syntax. This should not fail any valid
+        // address, but it could pass an invalid address with improperly nested parentheses. For full comment
+        // validation, we rely on other methods besides the regex.
         if (opts.allowComments) {
-            var commentContent = '(' + fwsMatchString + '|(' + makeLookahead(String.raw`[^\\]`) + PRINTING_MATCH + '))';
-            var comment = String.raw`(\(` + commentContent +  String.raw`*\))`;
+            // RFC 5322 3.2.2: comment   = "(" *([FWS] ccontent) [FWS] ")"
+            // This means any amount of ccontent and any amount of FWS, as long as there are no
+            // two consecutive FWS regions (that can't be merged into a single FWS region).
+            
+            //                 ccontent  = ctext / quoted-pair / comment
+            //                 ctext     = %d33-39 / %d42-91 / %d93-126 / obs-ctext
+            // RFC 5322 4.1:   obs-ctext = obs-NO-WS-CTL
+            // ctext is any low-ASCII printing character besides parentheses and backslash, plus
+            // non-whitespace control characters. If obsolete syntax is disallowed, then control characters
+            // are disallowed.
+            // Because we can't include the comment definition in ccontent without infinite recursion,
+            // we can't convert the specification exactly. In particular, we treat parentheses as ctext.
+            var baseCtext = '(' + makeLookahead(String.raw`[^\\]`) + PRINTING_MATCH + ')';
+            var ccontent = opts.allowControlCharactersInComments ?
+                makeAlternatives(baseCtext, obsNoWsCtlMatchString, escapedChar) :
+                makeAlternatives(baseCtext, escapedChar);
+                    
+            var comment = String.raw`(\((` + fwsMatchString + '?' + ccontent + ')*' + fwsMatchString + String.raw`?\))`;
             
             cfwsMatchString = '(((' + fwsMatchString + '?' + comment + ')+' + fwsMatchString + '?)|' + fwsMatchString + ')';
         }
