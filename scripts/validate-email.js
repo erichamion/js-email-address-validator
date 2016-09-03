@@ -87,6 +87,7 @@ function validateEmailAddressFormat(address, options) {
             separateDomainLabels: coalesce(optsWithoutDefaults.separateDomainLabels, true),
             allowObsoleteFoldingWhitespace: coalesce(optsWithoutDefaults.allowObsoleteFoldingWhitespace, true),
             allowDomainLiteralEscapes: coalesce(optsWithoutDefaults.allowDomainLiteralEscapes, true),
+            allowQuotedControlCharacters: coalesce(optsWithoutDefaults.allowQuotedControlCharacters, true),
         }
         
         // Check for conflicting options
@@ -124,6 +125,7 @@ function validateEmailAddressFormat(address, options) {
         var buildQuotedStringMatchString = defineBuildQuotedStringMatchString(opts.allowComments);
         var buildObsLocalPartMatchString = defineBuildObsLocalPartMatchString(opts.separateLocalLabels);
         var buildLocalAtomMatchString = defineBuildLocalAtomMatchString(opts.allowComments);
+        var buildQtextMatchString = defineBuildQtextMatchString(opts.allowQuotedControlCharacters);
 
         var result = {
             getAtextMatchStringForLocal: getAtextMatchStringForLocal,
@@ -131,6 +133,7 @@ function validateEmailAddressFormat(address, options) {
             buildQuotedStringMatchString: buildQuotedStringMatchString,
             buildObsLocalPartMatchString: buildObsLocalPartMatchString,
             buildLocalAtomMatchString: buildLocalAtomMatchString,
+            buildQtextMatchString: buildQtextMatchString,
             
             buildUncommentedQuotedString: buildUncommentedQuotedString,
         };
@@ -194,6 +197,26 @@ function validateEmailAddressFormat(address, options) {
             
         }
         
+        function defineBuildQtextMatchString(allowControlChars) {
+            
+            // RFC 5322 3.2.4: qtext = %d33 / %d35-91 / %d93-126 / obs-qtext
+            // RFC 5322 4.1: obs-qtext = obs-NW-WS-CTL
+            // With obsolete syntax, this means all low-ASCII characters except whitespace, backslash
+            // and double-quote. Without obsolete syntax, all printing low-ASCII characters except
+            // backslash and double-quote
+            var baseQtext = '(' + makeLookahead(String.raw`[\\"]`, true) + PRINTING_MATCH + ')';
+            if (allowControlChars) {
+                return function() {
+                    return makeAlternatives(baseQtext, obsNoWsCtlMatchString);
+                };
+            } else {
+                return function() {
+                    return baseQtext;
+                };
+            }
+            
+        }
+        
         // Not dynamically generated, but used by both constant and dynamic functions, so this
         // must be accessible here.
         function buildUncommentedQuotedString(escapedCharMatchString) {
@@ -201,25 +224,31 @@ function validateEmailAddressFormat(address, options) {
             // qcontent is either qtext or quoted-pair (that is, it's semantically a single character
             // within the quoted string. Note that the quoted string can be empty aside from the
             // surrounding double-quotes.
-            var qcontentMatchString = buildQuotableLocalCharMatchString(escapedCharMatchString)
+            var qcontentMatchString = buildQcontentMatchString(escapedCharMatchString)
             return '("(' + fwsMatchString + '?' + qcontentMatchString + ')*' + fwsMatchString + '?")'
         }
         
-        function buildQuotableLocalCharMatchString(escapedCharMatchString) {
-    //        // These cannot simply be quoted, but must be escaped even when inside quotes
-    //        var mustBeEscapedCharSet = String.raw`"\\`;
-    //
-    //        // Anything that isn't standard or in mustBeEscapedCharSet can be either escaped or quoted.
-    //        return '[^' + standardLocalCharSet + mustBeEscapedCharSet + ']';
-
-            // The above comment is not true. Quoted string can have Folding Whitespace, printing characters
-            // (except for " and \), and escaped characters.
-            // We don't really care whether a character is also legal outside of quoted strings, so our match string
-            // is as simple as that definition (which isn't quite as simple as it might seem).
-            var allowedPrintingChars = '(' + makeLookahead(String.raw`["\\]`, true) + PRINTING_MATCH + ')';
-            return makeAlternatives(fwsMatchString, allowedPrintingChars, escapedCharMatchString);
-
+        function buildQcontentMatchString(escapedCharMatchString) {
+            // RFC 5322 3.2.4: qcontent = qtext / quoted-pair
+            return makeAlternatives(buildQtextMatchString(), escapedCharMatchString);
         }
+        
+        
+//        function buildQuotableLocalCharMatchString(escapedCharMatchString) {
+//    //        // These cannot simply be quoted, but must be escaped even when inside quotes
+//    //        var mustBeEscapedCharSet = String.raw`"\\`;
+//    //
+//    //        // Anything that isn't standard or in mustBeEscapedCharSet can be either escaped or quoted.
+//    //        return '[^' + standardLocalCharSet + mustBeEscapedCharSet + ']';
+//
+//            // The above comment is not true. Quoted string can have Folding Whitespace, printing characters
+//            // (except for " and \), and escaped characters.
+//            // We don't really care whether a character is also legal outside of quoted strings, so our match string
+//            // is as simple as that definition (which isn't quite as simple as it might seem).
+//            var allowedPrintingChars = '(' + makeLookahead(String.raw`["\\]`, true) + PRINTING_MATCH + ')';
+//            return makeAlternatives(fwsMatchString, allowedPrintingChars, escapedCharMatchString);
+//
+//        }
         
         // Not dynamically generated, but only used by local dynamically generated functions
         function buildWordMatchString(atextMatchString, escapedCharMatchString, cfwsMatchString) {

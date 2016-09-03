@@ -173,7 +173,8 @@ QUnit.test('validateEmailAddressFormat_LocalHasInvalidSymbol_ShouldReject', func
         'abc[def]ghi@example.com',  // [ and ]
         'abc def@example.com',      // space
         'abc\ndef@example.com',     // newline
-        'abc,def@example.com'       // comma
+        'abc,def@example.com',      // comma
+        'abc\x02def@example.com',   // control character
         ];
     var results = [];
 
@@ -206,6 +207,7 @@ QUnit.test('validateEmailAddressFormat_LocalHasBareEscapedSymbols_ShouldReject',
         'abc\\ def@example.com',        // space
         'abc\\\ndef@example.com',       // newline
         'abc\\,def@example.com',        // comma
+        'abc\\\x02def@example.com',     // control character
         'abc.\\.def@example.com',       // consecutive dot
         'abc\\..def@example.com',       // consecutive dot
         '\\.abc@example.com',           // leading dot
@@ -241,6 +243,7 @@ QUnit.test('validateEmailAddressFormat_LocalHasQuotedSymbols_ShouldAccept', func
         '"abc def"@example.com',        
         '"abc\n\tdef"@example.com',
         '"abc,def"@example.com',
+        '"abc\x02def"@example.com',  
         '"abc....def"@example.com',     
         'abc."def@".ghi@example.com',
         '"abc".def."ghi"@example.com'
@@ -668,6 +671,7 @@ QUnit.test('validateEmailAddressFormat_LocalAllowedEscapedSymbols_ShouldAccept',
         'abc\\ def@example.com',        // space
         'abc\\\ndef@example.com',       // newline
         'abc\\,def@example.com',        // comma
+        'abc\\\x02def@example.com',     // control character
         'abc.\\.def@example.com',       // consecutive dot
         'abc\\..def@example.com',       // consecutive dot
         '\\.abc@example.com',           // leading dot
@@ -698,14 +702,15 @@ QUnit.test('validateEmailAddressFormat_LocalHasQuotedEscapesWhenBareEscapesDisal
         '"abc\\@"@example.com',           // @ at end of local part
         '"ab\\"c\\"d"@example.com',       // "
         '"\\"abc"@example.com',           // unbalanced "
-        'def."abc\\""@example.com',           // unbalanced "
-        '"abc\\[".def@example.com',           // [
+        'def."abc\\""@example.com',       // unbalanced "
+        '"abc\\[".def@example.com',       // [
         '"abc\\]"@example.com',           // ]
         '"abc\\[\\]def"@example.com',     // [ and ]
         '"abc\\[def\\]ghi"@example.com',  // [ and ]
         '"abc\\ def"@example.com',        // space
         '"abc\\\ndef"@example.com',       // newline
         '"abc\\,def"@example.com',        // comma
+        '"abc\x02def"@example.com',       // control character        
         '"abc.\\.def"@example.com',       // consecutive dot
         '"abc\\..def"@example.com',       // consecutive dot
         '"\\.abc"@example.com',           // leading dot
@@ -1162,5 +1167,26 @@ QUnit.test('validateEmailAddressFormat_NoDomainLiteralEscapesHasEscapeOrControl_
     assert.expect(addresses.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.address + '" has a domain literal with escaped characters or control characters when those have been disallowed and should fail');
+    })
+});
+
+QUnit.test('validateEmailAddressFormat_QuotedControlCharactersDisallowed_ShouldReject', function (assert) {
+
+    // Arrange
+    var addresses = [
+        'abc\x02def@example.com',
+        ];
+    var options = { allowQuotedControlCharacters: false };
+    var results = [];
+
+    // Act
+    addresses.forEach(function(addr) {
+        results.push({address:addr, result:validateEmailAddressFormat(addr, options)});
+    }); 
+
+    // Assert
+    assert.expect(addresses.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.address + '" has control characters in a quoted string but disallows this syntax and should fail');
     })
 });

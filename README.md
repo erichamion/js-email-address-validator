@@ -31,6 +31,7 @@ validateEmailAddress(address[, options])
   **separateDomainLabels** | **true** | If true, each dot-separated label in a hostname domain can be preceded or followed by CFWS. If false, CFWS can only occur before or after the entire domain.
   **allowObsoleteFoldingWhitespace** | **true** | If true, Folding Whitespace can contain multiple newlines, each separated by whitespace. If false, Folding Whitespace can contain at most one newline.
   **allowDomainLiteralEscapes** | **true** | If true, the text between the brackets in a domain literal can contain any low-ASCII character (including control characters) aside from square brackets and backslash, and it can contain backslash-escaped characters (which provides a way to include square brackets and backslash). If false, the text between the brackets can only be be FWS and printing characters excluding the square brackets and backslash, and it cannot contain escaped characters.
+  **allowQuotedControlCharacters** | **true** | If and only if true, a quoted string within the local part of an address can contain non-printing, non-whitespace ASCII control characters.
 
 ### Return Value
 By default, returns a boolean. If the address parameter is a well-formed email address, returns true. Otherwise, returns false.
@@ -95,7 +96,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - Local Part:
   - The local part can be up to 64 characters long.
   - Normal label: Normally, the legal characters within a label in the local part of the address include alphanumeric low-ASCII characters and the set {``!#$%&'*+-/=?^_`{|}~``}.
-  - Quoted string: An entire label (or an entire local part, but then the local part could be considered a single label) can be surrounded in double-quotes. Inside a quoted string, any printable character or folding whitespace is valid, with the exception of the backslash and the double-quote. Backslash escapes are also allowed withing a quoted string.
+  - Quoted string: An entire label (or an entire local part, but then the local part could be considered a single label) can be surrounded in double-quotes. Inside a quoted string, any printable character, control character, or folding whitespace is valid, with the exception of the backslash and the double-quote. Backslash escapes are also allowed withing a quoted string. Control characters can be disallowed with the `AllowQuotedControlCharacters` option.
   - Backslash Escape: 
     - Since naked backslash and naked double-quote cannot exist within a quoted string, they can be preceded by a backslash to become a quoted-pair. _This seems to be the only fully agreed upon non-redundant use of the backslash escape in the non-comment portion of a local part._
     - ANY character can be part of a quoted-pair, regardless of whether it must be quoted. (However, quoting/escaping a character that does not need to be quoted is redundant, unnecessary, needlessly verbose, and wasteful.)
