@@ -3,9 +3,11 @@ function EmailValidator(options) {
     
     this._opts = this._parseOptions(options);
     
-    this._fws = defineFws.call(that, this._opts.allowObsoleteFoldingWhitespace);
+    this._fws = defineFws.call(this, this._opts.allowObsoleteFoldingWhitespace);
+    this._quotedPair = defineQuotedPair.call(this, this._opts.allowEscapedControlCharacters);
     
     this._defineIfApplicable('_obsNoWsCtl', defineObsNoWsCtl, [this._opts.allowControlCharactersInComments, this._opts.allowDomainLiteralEscapes]);
+    this._defineIfApplicable('_ctext', defineCtext, [this._opts.allowComments, this._opts.allowControlCharactersInComments]);
     
     
     function _LocalPart(options) {
@@ -31,6 +33,17 @@ EmailValidator.prototype = {
         }
         return '(' + nonNull.join('|') + ')';
     },
+    
+    _subtractMatch: function(original, toSubtract) {
+        // Use this if negative character classes (e.g., '[^qwerty]') are not
+        // sufficient.
+        var subtractLookahead = this._makeLookahead(toSubtract, true);
+        return '(' + subtractLookahead + original + ')';
+    },
+    
+    _makeLookahead: function(str, isNegative) {
+        return '(?' + (isNegative ? '!' : '=') + str + ')';
+    },
 
     _coalesce: function(val, def) {
         // Coalesce to default on null or undefined, but not on false/falsey values.
@@ -43,8 +56,15 @@ EmailValidator.prototype = {
         var opts = options || {};
         var result = {
             allowObsoleteFoldingWhitespace: this._coalesce(opts.allowObsoleteFoldingWhitespace, true),
+            allowComments: this._coalesce(opts.allowComments, true),
             allowControlCharactersInComments: this._coalesce(opts.allowControlCharactersInComments, true),
             allowDomainLiteralEscapes: this._coalesce(opts.allowDomainLiteralEscapes, true),
+            allowEscapedControlCharacters: this._coalesce(opts.allowEscapedControlCharacters, true),
+        }
+        
+        // Resolve conflicts
+        if (!result.allowComments) {
+            result.allowControlCharactersInComments = false;
         }
 
         return result;
@@ -68,6 +88,10 @@ EmailValidator.prototype = {
     // RFC 5234 Appendix B.1: WSP = SP / HTAB
     // Space or (horizontal) tab
     _wsp: '( |\t)',
+    
+    // RFC 5322 2.2: "printable US-ASCII characters (i.e., characters that have values between 
+    // 33 and 126, inclusive)"
+    _printable: '[!-~]',
 };
 
 
@@ -95,4 +119,37 @@ function defineObsNoWsCtl(neededForComments, neededForDomainLiterals) {
     // RFC 5322 4.1: obs-NO-WS-CTL = %d1-8 / %d11 / %d12 / %d14-31 / %d127
     // Control characters that do not include carriage return, line feed, or whitespace
     return String.raw`[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]`;
+}
+
+function defineCtext(allowComments, allowControlCharactersInComments) {
+    if (!allowComments) return null;
+    
+    // RFC 5322 3.2.2: ctext = %d33-39 / %d42-91 / %d93-126 / obs-ctext
+    // Without obsolete syntax, this is all printable low-ASCII characters except parentheses
+    // and backslash. However, because ccontent includes both ctext and comment, and comment
+    // includes ccontent, we need to break the circular definition somehow. We do that by also
+    // treating parentheses as ctext.
+    var baseCtext = this._subtractMatch(this._printable, String.raw`\\`);
+    
+    // RFC 5322 4.1: obs-ctext = obs-NO-WS-CTL
+    return allowControlCharactersInComments ? 
+        this._makeAlternatives(baseCtext, this._obsNoWsCtl) :
+        baseCtext;
+}
+
+function defineQuotedPair(allowControlChars) {
+    // RFC 5322 3.2.1: quoted-pair = ("\" (VCHAR / WSP)) / obs-qp
+    // The VCHAR definition is taken from RFC5234, and it is simply the set of printing characters.
+    // Without obsolete syntax, this means quoted-pair is backslash followed by any printing or WSP
+    // character.
+    
+    if (allowControlChars) {
+        // RFC 5322 4.1: obs-qp = "\" (%d0 / obs-NO-WS-CTL / LF / CR)
+        // This, combined with the quoted-pair definition, can be simplified as:
+        // Quoted-pair is backslash followed by ANYTHING (including control characters, null, bare
+        // linefeed, and bare carriage return).
+        return String.raw`(\\[\s\S])`;
+    } else {
+        return String.raw`(\\` + this._makeAlternatives(this._printable, this._wsp) + ')';
+    }
 }

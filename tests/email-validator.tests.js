@@ -40,6 +40,45 @@ QUnit.test('EmailValidator_makeAlternatives_MakesValidAlternatives', function (a
     }
 });
 
+QUnit.test('EmailValidator_subtractMatch_MakesValidMatches', function (assert) {
+    // Arrange
+    var inputs = [
+        ['[a-z]', 'q'],
+        ['[a-z]', 'q'],
+        ['(.*)', '[a-z]'],
+        ['(.*)', '[a-z]'],
+        ['(.*)', '[a-z]'],
+        ];
+    var testData = [
+        'r',
+        'q',
+        'foo',
+        '!foo',
+        'f!oo',
+    ]
+    var expected = [
+        true,
+        false,
+        false,
+        true,
+        false,
+    ]
+    var actuals = [];
+    var emailValidator = new EmailValidator();
+    var target = emailValidator._subtractMatch;
+
+    // Act
+    for (var i = 0; i < inputs.length; i++) {
+        actuals.push(makeAnchoredRegex(target.apply(emailValidator, inputs[i])).test(testData[i]));
+    }; 
+
+    // Assert
+    assert.expect(inputs.length);
+    for (var i = 0; i < inputs.length; i++) {
+        assert.equal(actuals[i], expected[i], 'Input: ' + inputs[i] + 'TestData: ' + testData[i] + ', Expected: ' + expected[i] + ', Actual: ' + actuals[i]);
+    }
+});
+
 QUnit.test('EmailValidator_WSP_MatchesSpaceAndTab', function (assert) {
     // Arrange
     var inputs = [
@@ -206,6 +245,116 @@ QUnit.test('EmailValidator_FWS_DoesNotMatchInvalidFWS', function (assert) {
     })
 });
 
+QUnit.test('EmailValidator_ctext_MatchesValidCtext', function (assert) {
+    // Arrange
+    var inputs = [
+        'q',
+        '!',
+        '~',
+        '<',
+        ']',
+        '^',
+        '\x03',
+        '\x7F',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._ctext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is valid ctext and should pass');
+    })
+});
+
+QUnit.test('EmailValidator_ctext_DoesNotMatchInvalidCtext', function (assert) {
+    // Arrange
+    var inputs = [
+        '\\',
+        ' ',
+        '\t',
+        '\0',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._ctext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is invalid ctext and should fail');
+    })
+});
+
+QUnit.test('EmailValidator_quotedPair_MatchesValidQuotedPair', function (assert) {
+    // Arrange
+    var inputs = [
+        String.raw`\[`,
+        String.raw`\q`,
+        String.raw`\!`,
+        String.raw`\ `,
+        '\\\t',
+        '\\\0',
+        '\\\x0D',
+        '\\\x0A',
+        '\\\x07',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._quotedPair)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid quoted-pair and should pass');
+    })
+});
+
+QUnit.test('EmailValidator_quotedPair_DoesNotMatchInvalidQuotedPair', function (assert) {
+    // Arrange
+    var inputs = [
+        '\\',
+        'q',
+        '\\qq',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._quotedPair)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid quoted-pair and should fail');
+    })
+});
+
+
+
 QUnit.module('EmailValidator_WithOptions_LowLevel')
 
 QUnit.test('EmailValidator_FWSDisallowObsolete_MatchesProperFWS', function (assert) {
@@ -254,5 +403,134 @@ QUnit.test('EmailValidator_FWSDisallowObsolete_DoesNotMatchObsoleteFWS', functio
     assert.expect(inputs.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.input + '" is obsolete FWS but that syntax is disallowed and should fail');
+    })
+});
+
+QUnit.test('EmailValidator_ctextDisallowControlChars_MatchesValidCtext', function (assert) {
+    // Arrange
+    var inputs = [
+        'q',
+        '!',
+        '~',
+        '<',
+        ']',
+        '^',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._ctext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is valid ctext and should pass');
+    })
+});
+
+QUnit.test('EmailValidator_ctextDisallowControlChars_DoesNotMatchInvalidCtext', function (assert) {
+    // Arrange
+    var inputs = [
+        '\\',
+        ' ',
+        '\t',
+        '\0',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._ctext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is invalid ctext and should fail');
+    })
+});
+
+QUnit.test('EmailValidator_ctextDisallowControlChars_DoesNotMatchControlChars', function (assert) {
+    // Arrange
+    var inputs = [
+        '\03',
+        '\7F',
+        ];
+    var options = {allowControlCharactersInComments: false};
+    var target = new EmailValidator(options);
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._ctext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is invalid ctext and should fail');
+    })
+});
+
+QUnit.test('EmailValidator_quotedPairDisallowControlChars_MatchesValidQuotedPair', function (assert) {
+    // Arrange
+    var inputs = [
+        String.raw`\[`,
+        String.raw`\q`,
+        String.raw`\!`,
+        String.raw`\ `,
+        '\\\t',
+        ];
+    var options = { allowEscapedControlCharacters: false };
+    var target = new EmailValidator(options);
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._quotedPair)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid quoted-pair and should pass');
+    })
+});
+
+QUnit.test('EmailValidator_quotedPairDisallowControlChars_DoesNotMatchInvalidQuotedPair', function (assert) {
+    // Arrange
+    var inputs = [
+        '\\\0',
+        '\\\x0D',
+        '\\\x0A',
+        '\\\x07',
+        ];
+    var options = { allowEscapedControlCharacters: false };
+    var target = new EmailValidator(options);
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._quotedPair)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is a quoted-pair with a control character when that syntax is disallowed and should fail');
     })
 });
