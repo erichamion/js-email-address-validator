@@ -245,7 +245,7 @@ QUnit.test('EmailValidator_FWS_DoesNotMatchInvalidFWS', function (assert) {
     })
 });
 
-QUnit.test('EmailValidator_ctext_MatchesValidCtext', function (assert) {
+QUnit.test('CfwsValidator_ctext_MatchesValidCtext', function (assert) {
     // Arrange
     var inputs = [
         'q',
@@ -259,7 +259,7 @@ QUnit.test('EmailValidator_ctext_MatchesValidCtext', function (assert) {
         ];
     var target = new EmailValidator();
     var results = [];
-    var resultRe = makeAnchoredRegex(target._ctext)
+    var resultRe = makeAnchoredRegex(target._cfwsValidator._ctext)
 
     // Act
     
@@ -274,7 +274,7 @@ QUnit.test('EmailValidator_ctext_MatchesValidCtext', function (assert) {
     })
 });
 
-QUnit.test('EmailValidator_ctext_DoesNotMatchInvalidCtext', function (assert) {
+QUnit.test('CfwsValidator_ctext_DoesNotMatchInvalidCtext', function (assert) {
     // Arrange
     var inputs = [
         '\\',
@@ -284,7 +284,7 @@ QUnit.test('EmailValidator_ctext_DoesNotMatchInvalidCtext', function (assert) {
         ];
     var target = new EmailValidator();
     var results = [];
-    var resultRe = makeAnchoredRegex(target._ctext)
+    var resultRe = makeAnchoredRegex(target._cfwsValidator._ctext)
 
     // Act
     
@@ -406,7 +406,7 @@ QUnit.test('EmailValidator_FWSDisallowObsolete_DoesNotMatchObsoleteFWS', functio
     })
 });
 
-QUnit.test('EmailValidator_ctextDisallowControlChars_MatchesValidCtext', function (assert) {
+QUnit.test('CfwsValidator_ctextDisallowControlChars_MatchesValidCtext', function (assert) {
     // Arrange
     var inputs = [
         'q',
@@ -418,7 +418,7 @@ QUnit.test('EmailValidator_ctextDisallowControlChars_MatchesValidCtext', functio
         ];
     var target = new EmailValidator();
     var results = [];
-    var resultRe = makeAnchoredRegex(target._ctext)
+    var resultRe = makeAnchoredRegex(target._cfwsValidator._ctext)
 
     // Act
     
@@ -433,7 +433,7 @@ QUnit.test('EmailValidator_ctextDisallowControlChars_MatchesValidCtext', functio
     })
 });
 
-QUnit.test('EmailValidator_ctextDisallowControlChars_DoesNotMatchInvalidCtext', function (assert) {
+QUnit.test('CfwsValidator_ctextDisallowControlChars_DoesNotMatchInvalidCtext', function (assert) {
     // Arrange
     var inputs = [
         '\\',
@@ -443,7 +443,7 @@ QUnit.test('EmailValidator_ctextDisallowControlChars_DoesNotMatchInvalidCtext', 
         ];
     var target = new EmailValidator();
     var results = [];
-    var resultRe = makeAnchoredRegex(target._ctext)
+    var resultRe = makeAnchoredRegex(target._cfwsValidator._ctext)
 
     // Act
     
@@ -458,7 +458,7 @@ QUnit.test('EmailValidator_ctextDisallowControlChars_DoesNotMatchInvalidCtext', 
     })
 });
 
-QUnit.test('EmailValidator_ctextDisallowControlChars_DoesNotMatchControlChars', function (assert) {
+QUnit.test('CfwsValidator_ctextDisallowControlChars_DoesNotMatchControlChars', function (assert) {
     // Arrange
     var inputs = [
         '\03',
@@ -467,7 +467,7 @@ QUnit.test('EmailValidator_ctextDisallowControlChars_DoesNotMatchControlChars', 
     var options = {allowControlCharactersInComments: false};
     var target = new EmailValidator(options);
     var results = [];
-    var resultRe = makeAnchoredRegex(target._ctext)
+    var resultRe = makeAnchoredRegex(target._cfwsValidator._ctext)
 
     // Act
     

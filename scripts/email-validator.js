@@ -1,26 +1,4 @@
-function EmailValidator(options) {
-    var that = this;
-    
-    this._opts = this._parseOptions(options);
-    
-    this._fws = defineFws.call(this, this._opts.allowObsoleteFoldingWhitespace);
-    this._quotedPair = defineQuotedPair.call(this, this._opts.allowEscapedControlCharacters);
-    
-    this._defineIfApplicable('_obsNoWsCtl', defineObsNoWsCtl, [this._opts.allowControlCharactersInComments, this._opts.allowDomainLiteralEscapes]);
-    this._defineIfApplicable('_ctext', defineCtext, [this._opts.allowComments, this._opts.allowControlCharactersInComments]);
-    
-    
-    function _LocalPart(options) {
-        
-    }
-    
-    function _DomainPart(options) {
-        
-    }
-}
-
-
-EmailValidator.prototype = {
+var _validatorProto = {
 
     // Helper functions
     _makeAlternatives: function() {
@@ -94,6 +72,27 @@ EmailValidator.prototype = {
     _printable: '[!-~]',
 };
 
+function EmailValidator(options) {
+    var that = this;
+    
+    this._opts = this._parseOptions(options);
+    
+    this._fws = defineFws.call(this, this._opts.allowObsoleteFoldingWhitespace);
+    this._quotedPair = defineQuotedPair.call(this, this._opts.allowEscapedControlCharacters);
+    
+    this._defineIfApplicable('_obsNoWsCtl', defineObsNoWsCtl, [this._opts.allowControlCharactersInComments, this._opts.allowDomainLiteralEscapes]);
+    this._defineIfApplicable('_cfwsValidator', _createCfwsValidator, [this._opts]);
+    
+    
+    function _LocalPart(options) {
+        
+    }
+    
+    function _DomainPart(options) {
+        
+    }
+}
+EmailValidator.prototype = _validatorProto;
 
 function defineFws(allowObsolete) {
     // RFC 5322 3.2.2: FWS = ([*WSP CRLF] 1*WSP) / obs-FWS
@@ -121,22 +120,6 @@ function defineObsNoWsCtl(neededForComments, neededForDomainLiterals) {
     return String.raw`[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]`;
 }
 
-function defineCtext(allowComments, allowControlCharactersInComments) {
-    if (!allowComments) return null;
-    
-    // RFC 5322 3.2.2: ctext = %d33-39 / %d42-91 / %d93-126 / obs-ctext
-    // Without obsolete syntax, this is all printable low-ASCII characters except parentheses
-    // and backslash. However, because ccontent includes both ctext and comment, and comment
-    // includes ccontent, we need to break the circular definition somehow. We do that by also
-    // treating parentheses as ctext.
-    var baseCtext = this._subtractMatch(this._printable, String.raw`\\`);
-    
-    // RFC 5322 4.1: obs-ctext = obs-NO-WS-CTL
-    return allowControlCharactersInComments ? 
-        this._makeAlternatives(baseCtext, this._obsNoWsCtl) :
-        baseCtext;
-}
-
 function defineQuotedPair(allowControlChars) {
     // RFC 5322 3.2.1: quoted-pair = ("\" (VCHAR / WSP)) / obs-qp
     // The VCHAR definition is taken from RFC5234, and it is simply the set of printing characters.
@@ -152,4 +135,44 @@ function defineQuotedPair(allowControlChars) {
     } else {
         return String.raw`(\\` + this._makeAlternatives(this._printable, this._wsp) + ')';
     }
+}
+
+
+
+
+
+
+
+
+
+
+
+function _createCfwsValidator(options) {
+    // Create and return a _CfwsValidator if needed, or return null otherwise 
+    if (options.allowComments) {
+        return new _CfwsValidator(this, options);
+    } else {
+        return null;
+    }
+}
+
+function _CfwsValidator(outer, options) {
+    this._outer = outer;
+    
+    this._ctext = _defineCtext.call(this, options.allowControlCharactersInComments);
+};
+_CfwsValidator.prototype = _validatorProto;
+
+function _defineCtext(allowControlCharactersInComments) {
+    // RFC 5322 3.2.2: ctext = %d33-39 / %d42-91 / %d93-126 / obs-ctext
+    // Without obsolete syntax, this is all printable low-ASCII characters except parentheses
+    // and backslash. However, because ccontent includes both ctext and comment, and comment
+    // includes ccontent, we need to break the circular definition somehow. We do that by also
+    // treating parentheses as ctext.
+    var baseCtext = this._subtractMatch(this._printable, String.raw`\\`);
+    
+    // RFC 5322 4.1: obs-ctext = obs-NO-WS-CTL
+    return allowControlCharactersInComments ? 
+        this._makeAlternatives(baseCtext, this._outer._obsNoWsCtl) :
+        baseCtext;
 }
