@@ -84,13 +84,6 @@ function EmailValidator(options) {
     this._defineIfApplicable('_cfwsValidator', _createCfwsValidator, [this._opts]);
     
     
-    function _LocalPart(options) {
-        
-    }
-    
-    function _DomainPart(options) {
-        
-    }
 }
 EmailValidator.prototype = _validatorProto;
 
@@ -160,6 +153,7 @@ function _CfwsValidator(outer, options) {
     this._outer = outer;
     
     this._ctext = _defineCtext.call(this, options.allowControlCharactersInComments);
+    this._ccontent = _defineCcontent.call(this);
 };
 _CfwsValidator.prototype = _validatorProto;
 
@@ -175,4 +169,11 @@ function _defineCtext(allowControlCharactersInComments) {
     return allowControlCharactersInComments ? 
         this._makeAlternatives(baseCtext, this._outer._obsNoWsCtl) :
         baseCtext;
+}
+
+function _defineCcontent() {
+    // RFC 5322 3.2.2: ccontent = ctext / quoted-pair / comment
+    // We can't include comment in the ccontent definition because ccontent is part of the comment 
+    // definition.
+    return this._makeAlternatives(this._ctext, this._outer._quotedPair);
 }

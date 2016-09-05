@@ -281,6 +281,7 @@ QUnit.test('CfwsValidator_ctext_DoesNotMatchInvalidCtext', function (assert) {
         ' ',
         '\t',
         '\0',
+        '\\ ',
         ];
     var target = new EmailValidator();
     var results = [];
@@ -296,6 +297,63 @@ QUnit.test('CfwsValidator_ctext_DoesNotMatchInvalidCtext', function (assert) {
     assert.expect(inputs.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.input + '" is invalid ctext and should fail');
+    })
+});
+
+QUnit.test('CfwsValidator_ccontent_MatchesValidCcontent', function (assert) {
+    // Arrange
+    var inputs = [
+        'q',
+        '!',
+        '~',
+        '<',
+        ']',
+        '^',
+        '\x03',
+        '\x7F',
+        '\\ ',
+        '\\\\',
+        '\\\n',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._cfwsValidator._ccontent)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is valid ccontent and should pass');
+    })
+});
+
+QUnit.test('CfwsValidator_ccontent_DoesNotMatchInvalidCcontent', function (assert) {
+    // Arrange
+    var inputs = [
+        '\\',
+        ' ',
+        '\t',
+        '\0',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._cfwsValidator._ccontent)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is invalid ccontent and should fail');
     })
 });
 
