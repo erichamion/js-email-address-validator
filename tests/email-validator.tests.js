@@ -7,6 +7,38 @@ function makeAnchoredRegex(regexString) {
 
 QUnit.module('EmailValidator_Default_LowestLevel');
 
+QUnit.test('EmailValidator_makeAlternatives_MakesValidAlternatives', function (assert) {
+    // Arrange
+    var inputs = [
+        [],
+        ['foo-bar'],
+        ['(abc+)', '(\\.def)'],        
+        ['a', 'b', 'c'],
+        ['z', 'xxx', '([^qwerty])', '((?![abc]).*)'],
+        ];
+    var expected = [
+        '()',
+        '(foo-bar)',
+        '((abc+)|(\\.def))',
+        '(a|b|c)',
+        '(z|xxx|([^qwerty])|((?![abc]).*))',
+    ]
+    var actuals = [];
+    var emailValidator = new EmailValidator();
+    var target = emailValidator._makeAlternatives;
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        actuals.push(target.apply(emailValidator, input));
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    for (var i = 0; i < inputs.length; i++) {
+        assert.equal(actuals[i], expected[i], 'Input: ' + inputs[i] + ', Expected: ' + expected[i] + ', Actual: ' + actuals[i]);
+    }
+});
 
 QUnit.test('EmailValidator_WSP_MatchesSpaceAndTab', function (assert) {
     // Arrange
@@ -56,6 +88,44 @@ QUnit.test('EmailValidator_WSP_DoesNotMatchOtherChars', function (assert) {
         assert.notOk(result.result, '"' + result.input + '" is not WSP and should fail');
     })
 });
+
+QUnit.test('EmailValidator_obsNoWsCtl_MatchesControlChars', function (assert) {
+    // Arrange
+    var inputs = [
+        '\x01',
+        '\x05',
+        '\x08',
+        '\x0B',
+        '\x0C',
+        '\x10',
+        '\x1F',
+        '\x7F',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._obsNoWsCtl)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a non-whitespace control character and should pass');
+    })
+});
+
+
+
+
+
+QUnit.module('EmailValidator_WithOptions_LowestLevel');
+
+
+
 
 
 
