@@ -1,7 +1,14 @@
-QUnit.module('emailValidator_UnitTests');
+// Helper functions used by tests
+function makeAnchoredRegex(regexString) {
+    return new RegExp('^' + regexString + '$');
+}
 
 
-QUnit.test('emailValidator_WSP_MatchesSpaceAndTab', function (assert) {
+
+QUnit.module('EmailValidator_Default_LowestLevel');
+
+
+QUnit.test('EmailValidator_WSP_MatchesSpaceAndTab', function (assert) {
     // Arrange
     var inputs = [
         ' ',
@@ -9,7 +16,7 @@ QUnit.test('emailValidator_WSP_MatchesSpaceAndTab', function (assert) {
         ];
     var target = new EmailValidator();
     var results = [];
-    var resultRe = new RegExp(target._wsp)
+    var resultRe = makeAnchoredRegex(target._wsp)
 
     // Act
     
@@ -24,7 +31,7 @@ QUnit.test('emailValidator_WSP_MatchesSpaceAndTab', function (assert) {
     })
 });
 
-QUnit.test('emailValidator_WSP_DoesNotMatchOtherChars', function (assert) {
+QUnit.test('EmailValidator_WSP_DoesNotMatchOtherChars', function (assert) {
     // Arrange
     var inputs = [
         '\x127',
@@ -35,7 +42,7 @@ QUnit.test('emailValidator_WSP_DoesNotMatchOtherChars', function (assert) {
         ];
     var target = new EmailValidator();
     var results = [];
-    var resultRe = new RegExp(target._wsp)
+    var resultRe = makeAnchoredRegex(target._wsp)
 
     // Act
     
@@ -50,3 +57,81 @@ QUnit.test('emailValidator_WSP_DoesNotMatchOtherChars', function (assert) {
     })
 });
 
+
+
+
+QUnit.module('EmailValidator_Default_LowLevel');
+
+
+QUnit.test('EmailValidator_FWS_MatchesProperFWS', function (assert) {
+    // Arrange
+    var inputs = [
+        ' ',
+        '\t',
+        '\n ',
+        '   \t \t\n\t',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._fws)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is FWS and should pass');
+    })
+});
+
+QUnit.test('EmailValidator_FWS_MatchesObsoleteFWS', function (assert) {
+    // Arrange
+    var inputs = [
+        ' \n \n \n\t\n ',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._fws)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is obsolete but valid FWS and should pass');
+    })
+});
+
+QUnit.test('EmailValidator_FWS_DoesNotMatchInvalidFWS', function (assert) {
+    // Arrange
+    var inputs = [
+        ' a ',
+        '\x03',
+        '\n',
+        ' \n\n ',
+        ' \n',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._fws)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is invalid FWS and should pass');
+    })
+});
