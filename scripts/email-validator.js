@@ -17,37 +17,41 @@ function EmailValidator(options) {
     }
 }
 
-// Helper functions
-EmailValidator.prototype._makeAlternatives = function makeAlternatives() {
-    var nonNull = [];
-    for (var idx in arguments) {
-        var arg = arguments[idx];
-        if (arg !== undefined && arg !== null) {
-            nonNull.push(arg);
+EmailValidator.prototype = {
+
+    // Helper functions
+    _makeAlternatives: function() {
+        var nonNull = [];
+        for (var idx in arguments) {
+            var arg = arguments[idx];
+            if (arg !== undefined && arg !== null) {
+                nonNull.push(arg);
+            }
         }
-    }
-    return '(' + nonNull.join('|') + ')';
-};
+        return '(' + nonNull.join('|') + ')';
+    },
 
-EmailValidator.prototype._coalesce = function(val, def) {
-    // Coalesce to default on null or undefined, but not on false/falsey values.
-    if (val === undefined || val === null) return def;
-    return val;
-};
+    _coalesce: function(val, def) {
+        // Coalesce to default on null or undefined, but not on false/falsey values.
+        if (val === undefined || val === null) return def;
+        return val;
+    },
 
-EmailValidator.prototype._parseOptions = function(options) {
-    // Prevent null reference errors
-    var opts = options || {};
-    var result = {
-        allowObsoleteFoldingWhitespace: this._coalesce(opts.allowObsoleteFoldingWhitespace, true),
-    }
+    _parseOptions: function(options) {
+        // Prevent null reference errors
+        var opts = options || {};
+        var result = {
+            allowObsoleteFoldingWhitespace: this._coalesce(opts.allowObsoleteFoldingWhitespace, true),
+        }
+
+        return result;
+    },
     
-    return result;
+
+    // Constant or constant-like values
+    _atext: String.raw`[\`\-a-zA-Z0-9!#$%&'*+/=?^_{|}~]`,
+    _wsp: '( |\t)'
 };
-
-
-EmailValidator.prototype._atext = String.raw`[\`\-a-zA-Z0-9!#$%&'*+/=?^_{|}~]`;
-EmailValidator.prototype._wsp = '( |\t)';
 
 
 function defineFws(allowObsolete) {
