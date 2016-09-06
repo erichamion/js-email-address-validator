@@ -238,13 +238,117 @@ QUnit.test('EmailValidator_obsNoWsCtl_MatchesControlChars', function (assert) {
     })
 });
 
+QUnit.test('LocalPart_qtext_MatchesValidQtext', function (assert) {
+    // Arrange
+    var inputs = [
+        'q',
+        '3',
+        '!',
+        '~',
+        '\x07',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._qtext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is qtext and should pass');
+    })
+});
+
+QUnit.test('LocalPart_qtext_DoesNotMatchInvalidQtext', function (assert) {
+    // Arrange
+    var inputs = [
+        ' ',
+        '\t',
+        '\n',
+        '"',
+        '\\',
+        '\\"',
+        '\\ ',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._qtext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is not qtext and should fail');
+    })
+});
+
+
+
 
 
 
 
 QUnit.module('EmailValidator_WithOptions_LowestLevel');
 
+QUnit.test('LocalPart_qtext_MatchesValidQtext', function (assert) {
+    // Arrange
+    var inputs = [
+        'q',
+        '3',
+        '!',
+        '~',
+        '\x07',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._qtext)
 
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is qtext and should pass');
+    })
+});
+
+QUnit.test('LocalPart_qtext_DoesNotMatchControlCharacters', function (assert) {
+    // Arrange
+    var inputs = [
+        '\x07',
+        '\x03',
+        ];
+    var options = { allowQuotedControlCharacters: false };
+    var target = new EmailValidator(options);
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._qtext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is not qtext and should fail');
+    })
+});
 
 
 

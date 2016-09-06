@@ -43,6 +43,7 @@ var _validatorProto = {
             allowDomainLiteralEscapes: this._coalesce(opts.allowDomainLiteralEscapes, true),
             allowEscapedControlCharacters: this._coalesce(opts.allowEscapedControlCharacters, true),
             allowBareEscapes: this._coalesce(opts.allowBareEscapes, false),
+            allowQuotedControlCharacters: this._coalesce(opts.allowQuotedControlCharacters, true),
         }
         
         // Resolve conflicts
@@ -94,7 +95,7 @@ var _validatorProto = {
     // RFC 5322 pulls the WSP definition from RFC 5234.
     // RFC 5234 Appendix B.1: WSP = SP / HTAB
     // Space or (horizontal) tab
-    _wsp: '( |\t)',
+    _wsp: '[ \t]',
     
     // RFC 5322 2.2: "printable US-ASCII characters (i.e., characters that have values between 
     // 33 and 126, inclusive)"
@@ -244,6 +245,7 @@ function _LocalPart(outer, options) {
     this._getCfws = _getCfwsFromOuter;
     
     this._atext = _defineLocalAtext.call(this, options.allowBareEscapes);
+    this._qtext = _defineQtext.call(this, options.allowQuotedControlCharacters);
 }
 _LocalPart.prototype = _validatorProto;
 
@@ -256,4 +258,22 @@ function _defineLocalAtext(allowEscapes) {
     } else {
         return this._atext;
     }
+}
+
+function _defineQtext(allowControlChars) {
+    // RFC 5322 3.2.4: qtext = %d33 / %d35-91 / %d93-126 / obs-qtext
+    // RFC 5322 4.1: obs-qtext = obs-NO-WS-CTL
+    // With obsolete syntax, this means all low-ASCII characters except null, whitespace, backslash
+    // and double-quote. Without obsolete syntax, all printable low-ASCII characters except
+    // backslash and double-quote
+    var base;
+    var toSubtract;
+    if (allowControlChars) {
+        base = String.raw`[\x01-\x7F]`;
+        toSubtract = this._makeAlternatives(String.raw`[\x09\x0A\x0D"\\]`, this._wsp);
+    } else {
+        base = this._printable;
+        toSubtract = String.raw`["\\]`;
+    }
+    return this._subtractMatch(base, toSubtract);
 }
