@@ -38,6 +38,7 @@ var _validatorProto = {
             allowControlCharactersInComments: this._coalesce(opts.allowControlCharactersInComments, true),
             allowDomainLiteralEscapes: this._coalesce(opts.allowDomainLiteralEscapes, true),
             allowEscapedControlCharacters: this._coalesce(opts.allowEscapedControlCharacters, true),
+            allowBareEscapes: this._coalesce(opts.allowBareEscapes, false),
         }
         
         // Resolve conflicts
@@ -73,16 +74,15 @@ var _validatorProto = {
 };
 
 function EmailValidator(options) {
-    var that = this;
-    
     this._opts = this._parseOptions(options);
     
     this._fws = defineFws.call(this, this._opts.allowObsoleteFoldingWhitespace);
     this._quotedPair = defineQuotedPair.call(this, this._opts.allowEscapedControlCharacters);
     
     this._defineIfApplicable('_obsNoWsCtl', defineObsNoWsCtl, [this._opts.allowControlCharactersInComments, this._opts.allowDomainLiteralEscapes]);
-    this._defineIfApplicable('_cfwsValidator', _createCfwsValidator, [this._opts]);
     
+    this._defineIfApplicable('_cfwsValidator', _createCfwsValidator, [this._opts]);
+    this._localPart = new _LocalPart(this, this._opts);
     
 }
 EmailValidator.prototype = _validatorProto;
@@ -195,4 +195,25 @@ function _defineCfws() {
     // no two FWS regions are consecutive.
     
     return '(((' + this._outer._fws + '?' + this._comment + ')+' + this._outer._fws + '?)|' + this._outer._fws + ')';
+}
+
+
+
+
+function _LocalPart(outer, options) {
+    this._outer = outer;
+    
+    this._atext = _defineLocalAtext.call(this, options.allowBareEscapes);
+}
+_LocalPart.prototype = _validatorProto;
+
+function _defineLocalAtext(allowEscapes) {
+    // RFCs 5322, 5321, and 2822 do not seem to allow quoted-pair in normal (non-comment,
+    // non-quoted-string) portions of a local part, but RFC 3696 does, so we provide
+    // that as an option. The easiest way is to modify atext for the local part.
+    if (allowEscapes) {
+        return this._makeAlternatives(this._atext, this._outer._quotedPair);
+    } else {
+        return this._atext;
+    }
 }
