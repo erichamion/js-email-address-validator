@@ -1020,6 +1020,11 @@ QUnit.test('LocalPart_localDotAtomText_DoesNotMatchInvalidDotAtomText', function
         '\\tfoo',
         'foo@bar',
         'foo\x07bar',
+        'foo\\ bar',
+        '\\\t\\\n.\\ \\\t.foo',
+        'foo\\\x07bar',
+        '(comment)foo.bar',
+        'foo(comment)',
         ];
     var target = new EmailValidator();
     var results = [];
@@ -1035,5 +1040,149 @@ QUnit.test('LocalPart_localDotAtomText_DoesNotMatchInvalidDotAtomText', function
     assert.expect(inputs.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.input + '" is an invalid dot-atom-text and should fail');
+    })
+});
+
+
+
+
+QUnit.module('EmailValidator_WithOptions_HighLevel');
+
+QUnit.test('LocalPart_localDotAtomTextAllowBareEscapes_MatchesDotAtomTextWithQuotedPairs', function (assert) {
+    // Arrange
+    var inputs = [
+        'foo\\ bar',
+        '\\\t\\\n.\\ \\\t.foo',
+        'foo\\\x07bar',
+        ];
+    var options = { allowBareEscapes: true }
+    var target = new EmailValidator(options);
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._buildDotAtomText());
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid dot-atom-text and should pass');
+    })
+});
+
+QUnit.test('LocalPart_localDotAtomTextAllowBareEscapes_DoesNotMatchInvalidDotAtomText', function (assert) {
+    // Arrange
+    var inputs = [
+        '',
+        '.a',
+        'a.b.',
+        '.',
+        'foo(.3bar',
+        'foo)bar',
+        '<foo',
+        '>foo',
+        'foo[]',
+        'foo bar',
+        'foo\tbar',
+        '\\tfoo',
+        'foo@bar',
+        'foo\x07bar',
+        '(comment)foo.bar',
+        'foo(comment)',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._buildDotAtomText());
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid dot-atom-text and should fail');
+    })
+});
+
+
+
+
+
+
+QUnit.module('EmailValidator_Default_HigherLevel');
+
+QUnit.test('LocalPart_localDotAtom_MatchesValidDotAtom', function (assert) {
+    // Arrange
+    var inputs = [
+        'a',
+        'a.b',
+        'foo.bar.baz',
+        'foo!.3bar',
+        '3!#$%&\'*.+/=?.^_{|}.~',
+        '(comment)a',
+        '((nested) comment)a.b ',
+        '\t\n foo.bar.baz\t\n ',
+        'foo!.3bar(comment \n comment)',
+        '3!#$%&\'*.+/=?.^_{|}.~   (comment)',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._buildDotAtom());
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid dot-atom and should pass');
+    })
+});
+
+QUnit.test('LocalPart_localDotAtom_DoesNotMatchInvalidDotAtom', function (assert) {
+    // Arrange
+    var inputs = [
+        '',
+        '.a',
+        'a.b.',
+        '.',
+        'foo(.3bar',
+        'foo)bar',
+        '<foo',
+        '>foo',
+        'foo[]',
+        'foo bar',
+        'foo\tbar',
+        '\\tfoo',
+        'foo@bar',
+        '(comment)foo\x07bar',
+        'foo\\ bar',
+        '\\\t\\\n.\\ \\\t.foo',
+        'foo\\\x07bar',
+        '(comment)',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._buildDotAtom());
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid dot-atom and should fail');
     })
 });

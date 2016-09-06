@@ -22,6 +22,10 @@ var _validatorProto = {
     _makeLookahead: function(str, isNegative) {
         return '(?' + (isNegative ? '!' : '=') + str + ')';
     },
+    
+    _surroundWithOptional: function(center, surround) {
+        return '(' + surround + '?' + center + surround + '?)';
+    },
 
     _coalesce: function(val, def) {
         // Coalesce to default on null or undefined, but not on false/falsey values.
@@ -59,12 +63,23 @@ var _validatorProto = {
     
     
     
-    // Function depends on object fields that may vary
+    // Functions that depend on object fields that may vary
     _buildDotAtomText: function() {
         // RFC 5322 3.2.3: dot-atom-text = 1*atext *("." 1*atext)
         // Any number of dot-separated series of atext, each with non-zero length.
         // this._atext may vary depending on options and on what "this" is.
         return '(' + this._atext + '+' + String.raw`(\.` + this._atext + '+)*)';
+    },
+    
+    _buildDotAtom: function() {
+        // RFC 5322 3.2.3: dot-atom = [CFWS] dot-atom-text [CFWS]
+        // dot-atom-text may vary depending on options and on what "this" is.
+        var cfws = this._getCfws && this._getCfws();
+        if (cfws) {
+            return this._surroundWithOptional(this._buildDotAtomText(), this._getCfws());
+        } else {
+            return this._buildDotAtomText();
+        }
     },
     
     
@@ -89,10 +104,12 @@ var _validatorProto = {
 function EmailValidator(options) {
     this._opts = this._parseOptions(options);
     
-    this._fws = defineFws.call(this, this._opts.allowObsoleteFoldingWhitespace);
-    this._quotedPair = defineQuotedPair.call(this, this._opts.allowEscapedControlCharacters);
+    this._getCfws = _getCfwsMain;
     
-    this._defineIfApplicable('_obsNoWsCtl', defineObsNoWsCtl, [this._opts.allowControlCharactersInComments, this._opts.allowDomainLiteralEscapes]);
+    this._fws = _defineFws.call(this, this._opts.allowObsoleteFoldingWhitespace);
+    this._quotedPair = _defineQuotedPair.call(this, this._opts.allowEscapedControlCharacters);
+    
+    this._defineIfApplicable('_obsNoWsCtl', _defineObsNoWsCtl, [this._opts.allowControlCharactersInComments, this._opts.allowDomainLiteralEscapes]);
     
     this._defineIfApplicable('_cfwsValidator', _createCfwsValidator, [this._opts]);
     this._localPart = new _LocalPart(this, this._opts);
@@ -100,7 +117,7 @@ function EmailValidator(options) {
 }
 EmailValidator.prototype = _validatorProto;
 
-function defineFws(allowObsolete) {
+function _defineFws(allowObsolete) {
     // RFC 5322 3.2.2: FWS = ([*WSP CRLF] 1*WSP) / obs-FWS
     // Ignoring the obsolete syntax, this is zero or one newline embedded anywhere in a sequence
     // of one or more whitespace characters, as long as the newline is not final character.
@@ -114,7 +131,7 @@ function defineFws(allowObsolete) {
             strictFws;
 }
 
-function defineObsNoWsCtl(neededForComments, neededForDomainLiterals) {
+function _defineObsNoWsCtl(neededForComments, neededForDomainLiterals) {
     // obs-NO-WS-CTL is used in obs-ctext (which is in comments) and in obs-dtext (in domain
     // literals). It's also in the definition of obs-qp (in quoted pair/escaped character), but we
     // simplify the quoted-pair definition so we don't actually use it there. If both comments and
@@ -126,7 +143,7 @@ function defineObsNoWsCtl(neededForComments, neededForDomainLiterals) {
     return String.raw`[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]`;
 }
 
-function defineQuotedPair(allowControlChars) {
+function _defineQuotedPair(allowControlChars) {
     // RFC 5322 3.2.1: quoted-pair = ("\" (VCHAR / WSP)) / obs-qp
     // The VCHAR definition is taken from RFC5234, and it is simply the set of printing characters.
     // Without obsolete syntax, this means quoted-pair is backslash followed by any printing or WSP
@@ -141,6 +158,14 @@ function defineQuotedPair(allowControlChars) {
     } else {
         return String.raw`(\\` + this._makeAlternatives(this._printable, this._wsp) + ')';
     }
+}
+
+function _getCfwsMain() {
+    return this._cfwsValidator && this._cfwsValidator.matchString;
+}
+
+function _getCfwsFromOuter() {
+    return this._outer && this._outer._getCfws && this._outer._getCfws();
 }
 
 
@@ -215,6 +240,8 @@ function _defineCfws() {
 
 function _LocalPart(outer, options) {
     this._outer = outer;
+    
+    this._getCfws = _getCfwsFromOuter;
     
     this._atext = _defineLocalAtext.call(this, options.allowBareEscapes);
 }
