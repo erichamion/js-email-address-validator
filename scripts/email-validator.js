@@ -324,9 +324,16 @@ function _defineAndSetObsLocalParts(canHaveObsLocalPart) {
     if (!canHaveObsLocalPart) return;
     
     this._word = _defineWord.call(this);
+    this._obsLocalPart = _defineObsLocalPart.call(this);
 }
 
 function _defineWord() {
     // RFC 5322 3.2.5: word = atom / quoted-string
     return this._makeAlternatives(this._buildAtom(), this._quotedString);
+}
+
+function _defineObsLocalPart() {
+    // RFC 5322 4.4: obs-local-part = word *("." word)
+    // A sequence of one or more dot-separated words
+    return '(' + this._word + String.raw`(\.` + this._word + ')*)';
 }

@@ -1400,6 +1400,75 @@ QUnit.test('LocalPart_Word_DoesNotMatchInvalidWord', function (assert) {
     })
 });
 
+QUnit.test('LocalPart_ObsoleteLocalPart_MatchesValid', function (assert) {
+    // Arrange
+    var inputs = [
+        'a',
+        'a-b',
+        'foo_bar_baz',
+        'foo.bar',
+        '(comment)foo',
+        'foo.(comment) \n bar',
+        'foo(comment) \n .bar',
+        '"foo".bar',
+        'foo."bar".baz',
+        'foo.(comment)"bar".baz',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._obsLocalPart);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid obsolete local part and should pass');
+    })
+});
+
+QUnit.test('LocalPart_ObsoleteLocalPart_DoesNotMatchInvalid', function (assert) {
+    // Arrange
+    var inputs = [
+        '',
+        '.a.b',
+        'a.b.',
+        '.',
+        'foo(bar',
+        'foo)bar',
+        '<foo',
+        '>foo',
+        'foo[]',
+        'foo bar',
+        'foo\tbar',
+        '\\tfoo',
+        'foo@bar',
+        'foo\x07bar',
+        'foo\\ bar',
+        'foo\\\x07bar',
+        'abc"def"ghi',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._obsLocalPart);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid obsolete local part and should fail');
+    })
+});
+
 
 
 
@@ -1515,6 +1584,11 @@ QUnit.test('LocalPart_localDotAtom_DoesNotMatchInvalidDotAtom', function (assert
         '.a',
         'a.b.',
         '.',
+        '"foo"',
+        'foo."bar"',
+        '"foo".bar',
+        'foo."bar".baz',
+        'foo"bar"baz',
         'foo(.3bar',
         'foo)bar',
         '<foo',
