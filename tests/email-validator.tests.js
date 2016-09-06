@@ -79,6 +79,86 @@ QUnit.test('EmailValidator_subtractMatch_MakesValidMatches', function (assert) {
     }
 });
 
+QUnit.test('EmailValidator_atext_MatchesValidAtext', function (assert) {
+    // Arrange
+    var inputs = [
+        '\`',
+        '-',
+        'q',
+        'Q',
+        '3',
+        '!',
+        '#',
+        '$',
+        '%',
+        '&',
+        "'",
+        '*',
+        '+',
+        '/',
+        '=',
+        '?',
+        '^',
+        '_',
+        '{',
+        '|',
+        '}',
+        '~',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._atext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is atext and should pass');
+    })
+});
+
+QUnit.test('EmailValidator_atext_DoesNotMatchInvalidAtext', function (assert) {
+    // Arrange
+    var inputs = [
+        '(',
+        ')',
+        '<',
+        '>',
+        '[',
+        ']',
+        ':',
+        ';',
+        '@',
+        '\\',
+        ',',
+        '.',
+        '"',
+        ' ',
+        '\t',
+        '\x07',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._atext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is invalid atext and should fail');
+    })
+});
+
 QUnit.test('EmailValidator_WSP_MatchesSpaceAndTab', function (assert) {
     // Arrange
     var inputs = [
