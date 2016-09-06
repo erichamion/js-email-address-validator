@@ -239,6 +239,8 @@ function _defineCfws() {
 
 
 
+
+
 function _LocalPart(outer, options) {
     this._outer = outer;
     
@@ -247,6 +249,7 @@ function _LocalPart(outer, options) {
     this._atext = _defineLocalAtext.call(this, options.allowBareEscapes);
     this._qtext = _defineQtext.call(this, options.allowQuotedControlCharacters);
     this._qcontent = _defineQcontent.call(this);
+    this._quotedString = _defineQuotedString.call(this);
 }
 _LocalPart.prototype = _validatorProto;
 
@@ -280,5 +283,22 @@ function _defineQtext(allowControlChars) {
 }
 
 function _defineQcontent() {
+    // RFC 5322 3.2.4: qcontent = qtext / quoted-pair
     return this._makeAlternatives(this._qtext, this._outer._quotedPair);
+}
+
+function _defineQuotedString() {
+    // RFC 5322 3.2.4: quoted-string = [CFWS] DQUOTE *([FWS] qcontent) [FWS] DQUOTE [CFWS]
+    // Between the double-quote characters, any sequence of any amount of qcontent and FWS,
+    // as long as no two FWS regions (that can't be merged into a single valid FWS region) 
+    // are consecutive. The sequence between the double-quotes MAY be zero-length.
+    
+    var baseQuotedString = '"(' + this._outer._fws + '?' + this._qcontent + ')*' + this._outer._fws + '?"';
+    
+    var cfws = this._getCfws();
+    if (cfws) {
+        return this._surroundWithOptional(baseQuotedString, cfws);
+    } else {
+        return '(' + baseQuotedString + ')';
+    }
 }

@@ -677,60 +677,7 @@ QUnit.test('LocalPart_localAtext_DoesNotMatchInvalidAtext', function (assert) {
     })
 });
 
-QUnit.test('LocalPart_qcontent_MatchesValidQcontent', function (assert) {
-    // Arrange
-    var inputs = [
-        'q',
-        '3',
-        '!',
-        '~',
-        '\x07',
-        '\\"',
-        '\\ ',
-        '\\\n',
-        ];
-    var target = new EmailValidator();
-    var results = [];
-    var resultRe = makeAnchoredRegex(target._localPart._qcontent)
 
-    // Act
-    
-    inputs.forEach(function(input) {
-        results.push({input:input, result:resultRe.test(input)});
-    }); 
-
-    // Assert
-    assert.expect(inputs.length);
-    results.forEach(function(result) {
-        assert.ok(result.result, '"' + result.input + '" is qcontent and should pass');
-    })
-});
-
-QUnit.test('LocalPart_qcontent_DoesNotMatchInvalidQcontent', function (assert) {
-    // Arrange
-    var inputs = [
-        ' ',
-        '\t',
-        '\n',
-        '"',
-        '\\',
-        ];
-    var target = new EmailValidator();
-    var results = [];
-    var resultRe = makeAnchoredRegex(target._localPart._qcontent)
-
-    // Act
-    
-    inputs.forEach(function(input) {
-        results.push({input:input, result:resultRe.test(input)});
-    }); 
-
-    // Assert
-    assert.expect(inputs.length);
-    results.forEach(function(result) {
-        assert.notOk(result.result, '"' + result.input + '" is not qcontent and should fail');
-    })
-});
 
 
 
@@ -1054,6 +1001,61 @@ QUnit.test('CfwsValidator_Comment_DoesNotMatchInvalidComment', function (assert)
     })
 });
 
+QUnit.test('LocalPart_qcontent_MatchesValidQcontent', function (assert) {
+    // Arrange
+    var inputs = [
+        'q',
+        '3',
+        '!',
+        '~',
+        '\x07',
+        '\\"',
+        '\\ ',
+        '\\\n',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._qcontent)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is qcontent and should pass');
+    })
+});
+
+QUnit.test('LocalPart_qcontent_DoesNotMatchInvalidQcontent', function (assert) {
+    // Arrange
+    var inputs = [
+        ' ',
+        '\t',
+        '\n',
+        '"',
+        '\\',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._qcontent)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is not qcontent and should fail');
+    })
+});
+
 
 
 
@@ -1199,6 +1201,66 @@ QUnit.test('LocalPart_localDotAtomText_DoesNotMatchInvalidDotAtomText', function
     assert.expect(inputs.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.input + '" is an invalid dot-atom-text and should fail');
+    })
+});
+
+QUnit.test('LocalPart_QuotedString_MatchesValidQuotedString', function (assert) {
+    // Arrange
+    var inputs = [
+        '""',
+        '"foo"',
+        '"foo....bar"',
+        '"foo bar"',
+        '"foo(bar"',
+        '"foo \n bar"',
+        '(comment) "foo" \n ',
+        '"foo\\\nbar"',
+        '"foo\x07bar"',
+        '"foo\\"bar"',
+        '"foo<>bar"',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._quotedString)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid quoted-string and should pass');
+    })
+});
+
+QUnit.test('LocalPart_qcontent_DoesNotMatchInvalidQuotedString', function (assert) {
+    // Arrange
+    var inputs = [
+        'notquoted',
+        '"unbalanced quote',
+        String.raw`'wrong quote type'`,
+        '("within a comment")',
+        '"illegal"dquote"',
+        '"illegalbackslash\\"',
+        '"invalid\n\nFWS',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._quotedString)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid quoted-string and should fail');
     })
 });
 
