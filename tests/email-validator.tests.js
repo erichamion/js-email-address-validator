@@ -653,3 +653,52 @@ QUnit.test('CfwsValidator_Comment_DoesNotMatchInvalidComment', function (assert)
         assert.notOk(result.result, '"' + result.input + '" is an invalid comment and should fail');
     })
 });
+
+QUnit.test('CfwsValidator_CFWS_MatchesValidCFWS', function (assert) {
+    // Arrange
+    var inputs = [
+        '()',
+        ' \n ',
+        '   \n\t(comment) \n (comment)  ',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._cfwsValidator.matchString)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is valid CFWS and should pass');
+    })
+});
+
+QUnit.test('CfwsValidator_Comment_DoesNotMatchInvalidCFWS', function (assert) {
+    // Arrange
+    var inputs = [
+        '',
+        ' (open parentheses',
+        '(comment) \n\n\n (comment)',
+        '(comment)notcomment',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._cfwsValidator.matchString)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is invalid CFWS and should fail');
+    })
+});

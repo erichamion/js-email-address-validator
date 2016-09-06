@@ -155,6 +155,9 @@ function _CfwsValidator(outer, options) {
     this._ctext = _defineCtext.call(this, options.allowControlCharactersInComments);
     this._ccontent = _defineCcontent.call(this);
     this._comment = _defineComment.call(this);
+    
+    // Put it all together
+    this.matchString = _defineCfws.call(this);
 };
 _CfwsValidator.prototype = _validatorProto;
 
@@ -184,4 +187,12 @@ function _defineComment() {
     // Between the parentheses can be any amount of FWS and any amount of ccontent, with the restriction
     // that no two FWS regions (that can't be merged into a single valid FWS region) are consecutive.
     return String.raw`(\((` + this._outer._fws + '?' + this._ccontent + ')*' + this._outer._fws + String.raw`?\))`;
+}
+
+function _defineCfws() {
+    // RFC 5322 3.2.2: CFWS = (1*([FWS] comment) [FWS]) / FWS
+    // Any number of comments and FWS regions, as long as there is at least one of either type, and as long as
+    // no two FWS regions are consecutive.
+    
+    return '(((' + this._outer._fws + '?' + this._comment + ')+' + this._outer._fws + '?)|' + this._outer._fws + ')';
 }
