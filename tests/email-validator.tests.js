@@ -1056,6 +1056,72 @@ QUnit.test('LocalPart_qcontent_DoesNotMatchInvalidQcontent', function (assert) {
     })
 });
 
+QUnit.test('LocalPart_localAtom_MatchesValidAtom', function (assert) {
+    // Arrange
+    var inputs = [
+        'a',
+        'a-b',
+        'foo_bar_baz',
+        'foo!3bar',
+        '3!#$%&\'*+/=?^_{|}~',
+        '(comment)foo',
+        'foo(comment)',
+        ' \n (comment) \n foo\t(comment)',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._buildAtom());
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid atom and should pass');
+    })
+});
+
+QUnit.test('LocalPart_localAtom_DoesNotMatchInvalidAtom', function (assert) {
+    // Arrange
+    var inputs = [
+        '',
+        'a.b',
+        'a.b.',
+        '.',
+        'foo(bar',
+        'foo)bar',
+        '<foo',
+        '>foo',
+        'foo[]',
+        'foo bar',
+        'foo\tbar',
+        '\\tfoo',
+        'foo@bar',
+        'foo\x07bar',
+        'foo\\ bar',
+        'foo\\\x07bar',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._buildAtom());
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid atom and should fail');
+    })
+});
+
 
 
 
@@ -1263,6 +1329,9 @@ QUnit.test('LocalPart_qcontent_DoesNotMatchInvalidQuotedString', function (asser
         assert.notOk(result.result, '"' + result.input + '" is an invalid quoted-string and should fail');
     })
 });
+
+
+
 
 
 

@@ -83,6 +83,20 @@ var _validatorProto = {
         }
     },
     
+    _buildAtom: function() {
+        // RFC 5322 3.2.3: atom = [CFWS] 1*atext [CFWS]
+        // This is only needed for obs-local-part and obs-domain, so there are combinations of
+        // options that don't require it. However, it's easiest to put this here in the prototype
+        // regardless of whether it's used.
+        var baseAtom = '(' + this._atext + '+)';
+        var cfws = this._getCfws && this._getCfws();
+        if (cfws) {
+            return this._surroundWithOptional(baseAtom, this._getCfws());
+        } else {
+            return baseAtom;
+        }
+    },
+    
     
     
 
@@ -250,6 +264,8 @@ function _LocalPart(outer, options) {
     this._qtext = _defineQtext.call(this, options.allowQuotedControlCharacters);
     this._qcontent = _defineQcontent.call(this);
     this._quotedString = _defineQuotedString.call(this);
+    
+    _defineAndSetObsLocalParts.call(this, options.separateLocalLabels);
 }
 _LocalPart.prototype = _validatorProto;
 
@@ -302,3 +318,10 @@ function _defineQuotedString() {
         return '(' + baseQuotedString + ')';
     }
 }
+
+function _defineAndSetObsLocalParts(canHaveObsLocalPart) {
+    if (!canHaveObsLocalPart) return;
+    
+    
+}
+
