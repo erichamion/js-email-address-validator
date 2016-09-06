@@ -592,3 +592,64 @@ QUnit.test('EmailValidator_quotedPairDisallowControlChars_DoesNotMatchInvalidQuo
         assert.notOk(result.result, '"' + result.input + '" is a quoted-pair with a control character when that syntax is disallowed and should fail');
     })
 });
+
+
+
+
+
+QUnit.module('EmailValidator_Default_MidLevel');
+
+
+QUnit.test('CfwsValidator_Comment_MatchesValidComments', function (assert) {
+    // Arrange
+    var inputs = [
+        '()',
+        '(This is a comment)',
+        '(This is a (nested) comment)',
+        '(comment with \n newline in folding whitespace)',
+        '(comment with \x07control \x01characters)',
+        '(comment with \\( escaped \\\\ characters)',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._cfwsValidator._comment)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid comment and should pass');
+    })
+});
+
+QUnit.test('CfwsValidator_Comment_DoesNotMatchInvalidComment', function (assert) {
+    // Arrange
+    var inputs = [
+        'No parentheses',
+        '(Only open parenthesis',
+        'Only close parenthesis)',
+        '(Invalid\nfolding whitespace)',
+        '(Bare backslash\\)',
+        '(Nested comment is (correct but) outer is not closed',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._cfwsValidator._comment)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid comment and should fail');
+    })
+});
