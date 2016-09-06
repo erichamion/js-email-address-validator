@@ -44,6 +44,7 @@ var _validatorProto = {
             allowEscapedControlCharacters: this._coalesce(opts.allowEscapedControlCharacters, true),
             allowBareEscapes: this._coalesce(opts.allowBareEscapes, false),
             allowQuotedControlCharacters: this._coalesce(opts.allowQuotedControlCharacters, true),
+            separateLocalLabels: this._coalesce(opts.separateLocalLabels, true),
         }
         
         // Resolve conflicts
@@ -322,6 +323,10 @@ function _defineQuotedString() {
 function _defineAndSetObsLocalParts(canHaveObsLocalPart) {
     if (!canHaveObsLocalPart) return;
     
-    
+    this._word = _defineWord.call(this);
 }
 
+function _defineWord() {
+    // RFC 5322 3.2.5: word = atom / quoted-string
+    return this._makeAlternatives(this._buildAtom(), this._quotedString);
+}

@@ -1330,6 +1330,76 @@ QUnit.test('LocalPart_qcontent_DoesNotMatchInvalidQuotedString', function (asser
     })
 });
 
+QUnit.test('LocalPart_localAtom_MatchesValidWord', function (assert) {
+    // Arrange
+    var inputs = [
+        'a',
+        'a-b',
+        'foo_bar_baz',
+        'foo!3bar',
+        '3!#$%&\'*+/=?^_{|}~',
+        '(comment)foo',
+        'foo(comment)',
+        ' \n (comment) \n foo\t(comment)',
+        '"quoted string"',
+        '(comment) "quoted string"',
+        '""',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._word);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid word and should pass');
+    })
+});
+
+QUnit.test('LocalPart_Word_DoesNotMatchInvalidWord', function (assert) {
+    // Arrange
+    var inputs = [
+        '',
+        'a.b',
+        'a.b.',
+        '.',
+        'foo(bar',
+        'foo)bar',
+        '<foo',
+        '>foo',
+        'foo[]',
+        'foo bar',
+        'foo\tbar',
+        '\\tfoo',
+        'foo@bar',
+        'foo\x07bar',
+        'foo\\ bar',
+        'foo\\\x07bar',
+        'abc"def"ghi',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._word);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid word and should fail');
+    })
+});
+
 
 
 
