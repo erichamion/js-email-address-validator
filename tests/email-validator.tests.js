@@ -895,6 +895,15 @@ QUnit.test('CfwsValidator_Comment_DoesNotMatchInvalidComment', function (assert)
     })
 });
 
+
+
+
+
+
+
+
+QUnit.module('EmailValidator_Default_HighLevel');
+
 QUnit.test('CfwsValidator_CFWS_MatchesValidCFWS', function (assert) {
     // Arrange
     var inputs = [
@@ -919,7 +928,7 @@ QUnit.test('CfwsValidator_CFWS_MatchesValidCFWS', function (assert) {
     })
 });
 
-QUnit.test('CfwsValidator_Comment_DoesNotMatchInvalidCFWS', function (assert) {
+QUnit.test('CfwsValidator_CFWS_DoesNotMatchInvalidCFWS', function (assert) {
     // Arrange
     var inputs = [
         '',
@@ -941,5 +950,90 @@ QUnit.test('CfwsValidator_Comment_DoesNotMatchInvalidCFWS', function (assert) {
     assert.expect(inputs.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.input + '" is invalid CFWS and should fail');
+    })
+});
+
+QUnit.test('CfwsValidator_CFWS_MatchesValidCFWS', function (assert) {
+    // Arrange
+    var inputs = [
+        '()',
+        ' \n ',
+        '   \n\t(comment) \n (comment)  ',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._cfwsValidator.matchString)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is valid CFWS and should pass');
+    })
+});
+
+QUnit.test('LocalPart_localDotAtomText_MatchesValidDotAtomText', function (assert) {
+    // Arrange
+    var inputs = [
+        'a',
+        'a.b',
+        'foo.bar.baz',
+        'foo!.3bar',
+        '3!#$%&\'*.+/=?.^_{|}.~',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._buildDotAtomText());
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid dot-atom-text and should pass');
+    })
+});
+
+QUnit.test('LocalPart_localDotAtomText_DoesNotMatchInvalidDotAtomText', function (assert) {
+    // Arrange
+    var inputs = [
+        '',
+        '.a',
+        'a.b.',
+        '.',
+        'foo(.3bar',
+        'foo)bar',
+        '<foo',
+        '>foo',
+        'foo[]',
+        'foo bar',
+        'foo\tbar',
+        '\\tfoo',
+        'foo@bar',
+        'foo\x07bar',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._buildDotAtomText());
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid dot-atom-text and should fail');
     })
 });

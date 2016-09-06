@@ -56,6 +56,19 @@ var _validatorProto = {
         }
     },
     
+    
+    
+    
+    // Function depends on object fields that may vary
+    _buildDotAtomText: function() {
+        // RFC 5322 3.2.3: dot-atom-text = 1*atext *("." 1*atext)
+        // Any number of dot-separated series of atext, each with non-zero length.
+        // this._atext may vary depending on options and on what "this" is.
+        return '(' + this._atext + '+' + String.raw`(\.` + this._atext + '+)*)';
+    },
+    
+    
+    
 
     // Constant or constant-like values
     
