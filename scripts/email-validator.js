@@ -267,6 +267,8 @@ function _LocalPart(outer, options) {
     this._quotedString = _defineQuotedString.call(this);
     
     _defineAndSetObsLocalParts.call(this, options.separateLocalLabels);
+    
+    this.matchString = _defineLocalPart.call(this);
 }
 _LocalPart.prototype = _validatorProto;
 
@@ -336,4 +338,10 @@ function _defineObsLocalPart() {
     // RFC 5322 4.4: obs-local-part = word *("." word)
     // A sequence of one or more dot-separated words
     return '(' + this._word + String.raw`(\.` + this._word + ')*)';
+}
+
+function _defineLocalPart() {
+    // RFC 5322 local-part = dot-atom / quoted-string / obs-local-part
+    // If _obsLocalPart is not defined, _makeAlternatives will deal with it correctly.
+    return this._makeAlternatives(this._buildDotAtom(), this._quotedString, this._obsLocalPart);
 }
