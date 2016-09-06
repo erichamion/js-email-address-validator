@@ -677,6 +677,61 @@ QUnit.test('LocalPart_localAtext_DoesNotMatchInvalidAtext', function (assert) {
     })
 });
 
+QUnit.test('LocalPart_qcontent_MatchesValidQcontent', function (assert) {
+    // Arrange
+    var inputs = [
+        'q',
+        '3',
+        '!',
+        '~',
+        '\x07',
+        '\\"',
+        '\\ ',
+        '\\\n',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._qcontent)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is qcontent and should pass');
+    })
+});
+
+QUnit.test('LocalPart_qcontent_DoesNotMatchInvalidQcontent', function (assert) {
+    // Arrange
+    var inputs = [
+        ' ',
+        '\t',
+        '\n',
+        '"',
+        '\\',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._localPart._qcontent)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is not qcontent and should fail');
+    })
+});
+
 
 
 

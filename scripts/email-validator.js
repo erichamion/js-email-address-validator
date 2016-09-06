@@ -246,6 +246,7 @@ function _LocalPart(outer, options) {
     
     this._atext = _defineLocalAtext.call(this, options.allowBareEscapes);
     this._qtext = _defineQtext.call(this, options.allowQuotedControlCharacters);
+    this._qcontent = _defineQcontent.call(this);
 }
 _LocalPart.prototype = _validatorProto;
 
@@ -276,4 +277,8 @@ function _defineQtext(allowControlChars) {
         toSubtract = String.raw`["\\]`;
     }
     return this._subtractMatch(base, toSubtract);
+}
+
+function _defineQcontent() {
+    return this._makeAlternatives(this._qtext, this._outer._quotedPair);
 }
