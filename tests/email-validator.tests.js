@@ -2304,7 +2304,7 @@ QUnit.test('EmailValidator_addrSpec_MatchesValid', function (assert) {
     // Arrange
     var inputs = [
         'a@b',
-        'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstu@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz',
+        'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghi',
         '(comment with \n FWS) foo.(comment)"bar".baz@[127.0.0.1] (comment)',
         'foo@(comment ) \n example (comment) .  \n (comment) com (comment)',
         ];
@@ -2355,5 +2355,85 @@ QUnit.test('EmailValidator_addrSpec_DoesNotMatchInvalid', function (assert) {
     assert.expect(inputs.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.input + '" is an invalid address and should fail');
+    })
+});
+
+
+
+
+
+
+
+
+
+QUnit.module('EmailValidator_WithOptions_HighestLevel');
+
+QUnit.test('EmailValidator_addrSpecLocalAllowed_MatchesFullAndLocalAddresses', function (assert) {
+    // Arrange
+    var inputs = [
+        'foo',
+        'foo@bar',
+        ];
+    var options = { allowLocalAddresses: true };
+    var target = new EmailValidator(options);
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._addrSpec);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid full or local address and should pass');
+    })
+});
+
+QUnit.test('EmailValidator_addrSpecLocalRequired_MatchesLocalAddress', function (assert) {
+    // Arrange
+    var inputs = [
+        'foo',
+        ];
+    var options = { allowLocalAddresses: -1 };
+    var target = new EmailValidator(options);
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._addrSpec);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid local address and should pass');
+    })
+});
+
+QUnit.test('EmailValidator_addrSpecLocalRequired_DoesNotMatchFullAddress', function (assert) {
+    // Arrange
+    var inputs = [
+        'foo@bar',
+        ];
+    var options = { allowLocalAddresses: -1 };
+    var target = new EmailValidator(options);
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._addrSpec);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is not a local address and should fail');
     })
 });
