@@ -81,7 +81,6 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - An email address (in the language of RFC 2822 and RFC 5322, an addr-spec) contains a local part, followed by "@", followed by a domain part. (This behavior can be modified to either allow or require addresses with _only_ a local part using the allowLocalAddresses option)
 - The local part and the domain part are each composed of one or more sections or labels separated by a period.
 - No label can be entirely empty, which means that two periods cannot _normally_ appear consecutively (but see below for escaped characters and quoted strings). This also means that neither the local part nor the domain part will start or end with an unescaped period.
-- An email address cannot be used if it is more than 254 characters. Longer addresses can exist, but the commands that send and receive mail require a string of 256 characters or less, and that string includes a surrounding pair of angle brackets that takes up two of the 256 characters. This validator will reject any address longer than 254 characters because it cannot be used.
 - Folding Whitespace: Folding whitespace occurs in specific contexts. It consists of any number of space, tab, and/or newline characters, and it always ends with a space or tab. (not fully implemented - some contexts accept any whitespace when they should take folding whitespace)
 - Backslash Escape: A backslash followed by another character forms a "quoted-pair". This has the effect of escaping the second character in the pair, making it legal where it otherwise would be illegal and removing any special meaning it may have. This is not allowed in all contexts.
 - Comment:
@@ -126,6 +125,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
 ## Future Plans
 - RFC 5321 places some restrictions on domain literals. Implement those restrictions.
 - RFC 5321 also is more strict on the local part of the address than the rules I followed. Backslash escapes are not allowed in unquoted strings (this now matches the default behavior), a quoted string must be the entire local part (available as an option already), and I haven't fully reviewed to see if there are other restrictions. Review the RFC and implement these (possibly as options).
+- An email address cannot be used if it is more than 254 characters. Longer addresses can exist, but the SMTP field in which the address belongs requires a string of 256 characters or less, and that string includes a surrounding pair of angle brackets that takes up two of the 256 characters.
   - (On the other hand, this paragraph in RFC 5321 seems to state that backslash escapes can be used outside of quoted strings):
   
   > Note that the backslash, "\", is a quote character, which is used to
