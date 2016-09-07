@@ -367,6 +367,7 @@ function _DomainPart(outer, options) {
     
     this._label = _buildDomainLabel.call(this);
     this._dtext = _defineDtext.call(this, options.allowDomainLiteralEscapes);
+    this._domainLiteral = _defineDomainLiteral.call(this);
     
     this._buildDotAtomText = _buildDomainDotAtomText;
     
@@ -386,6 +387,20 @@ function _defineDtext(allowEscapes) {
     return allowEscapes ?
         this._makeAlternatives(baseDtext, this._outer._obsNoWsCtl, this._outer._quotedPair) :
         baseDtext;
+}
+
+function _defineDomainLiteral() {
+    // RFC 5322 3.4.1: [CFWS] "[" *([FWS] dtext) [FWS] "]" [CFWS]
+    // A bracketed literal domain is supposed to be the host's literal address (e.g., an IP address),
+    // but RFC 5322 puts very few restrictions on what can be inside the brackets.
+    // The string in between the brackets is any series (including empty) of dtext and FWS, as long as no 
+    // two FWS (that can't be merged into a single valid FWS) are consecutive.
+    
+    var baseLiteral = String.raw`(\[(` + this._outer._fws + '?' + this._dtext + ')*' + this._outer._fws + String.raw`?\])`;
+    var cfws = this._getCfws();
+    return cfws ?
+        this._surroundWithOptional(baseLiteral, cfws) :
+        baseLiteral;
 }
 
 function _buildDomainDotAtomText() {

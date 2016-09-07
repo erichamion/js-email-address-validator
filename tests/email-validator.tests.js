@@ -1837,6 +1837,108 @@ QUnit.test('DomainPart_domainDotAtom_DoesNotMatchInvalidDotAtom', function (asse
     })
 });
 
+QUnit.test('DomainPart_DomainLiteral_MatchesValidDomainLiteral', function (assert) {
+    // Arrange
+    var inputs = [
+        '[]',
+        '[127.0.0.1]',
+        '(comment) \n [127.0.0.1]',
+        '[ \n foo\t\n bar \n\t]',
+        '[foo\x07bar]',
+        '[foo)bar]',
+        '[foo"bar]',
+        '[foo\\[bar]',
+        '[foo\\]bar]',
+        '[foo\\\x0Dbar]',
+        '[foo\\\\bar]',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._domainPart._domainLiteral);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid domain literal and should pass');
+    })
+});
+
+QUnit.test('DomainPart_DomainLiteral_DoesNotMatchInvalidDomainLiteral', function (assert) {
+    // Arrange
+    var inputs = [
+        '',
+        '[noclosebracket',
+        'noopenbracket]',
+        '(badcomment[foo]',
+        '[bad\nFWS]',
+        '[foo[bar]',
+        '[foo]bar]',
+        '[foo\x0Dbar]',
+        '[foo\\]',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._domainPart._domainLiteral);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid domain literal and should fail');
+    })
+});
+
+
+
+
+
+
+
+
+
+
+QUnit.module('EmailValidator_WithOptions_HighLevel');
+
+QUnit.test('DomainPart_DomainLiteralDisallowEscapes_DoesNotMatchInvalidDomainLiteral', function (assert) {
+    // Arrange
+    var inputs = [
+        '[foo\\[bar]',
+        '[foo\\]bar]',
+        '[foo\\\x0Dbar]',
+        '[foo\\\\bar]',
+        ];
+    var options = { allowDomainLiteralEscapes: false }
+    var target = new EmailValidator(options);
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._domainPart._domainLiteral);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid domain literal and should fail');
+    })
+});
+
+
+
+
 
 
 
@@ -1912,6 +2014,10 @@ QUnit.test('LocalPart_LocalPart_DoesNotMatchInvalid', function (assert) {
         assert.notOk(result.result, '"' + result.input + '" is an invalid local part and should fail');
     })
 });
+
+
+
+
 
 
 
