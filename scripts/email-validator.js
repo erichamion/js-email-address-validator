@@ -45,6 +45,7 @@ var _validatorProto = {
             allowBareEscapes: this._coalesce(opts.allowBareEscapes, false),
             allowQuotedControlCharacters: this._coalesce(opts.allowQuotedControlCharacters, true),
             separateLocalLabels: this._coalesce(opts.separateLocalLabels, true),
+            allowLocalAddresses: this._coalesce(opts.allowLocalAddresses, 0),
         }
         
         // Resolve conflicts
@@ -129,6 +130,7 @@ function EmailValidator(options) {
     
     this._defineIfApplicable('_cfwsValidator', _createCfwsValidator, [this._opts]);
     this._localPart = new _LocalPart(this, this._opts);
+    this._defineIfApplicable('_domainPart', _createDomainPart, [this._opts]);
     
 }
 EmailValidator.prototype = _validatorProto;
@@ -184,16 +186,6 @@ function _getCfwsFromOuter() {
     return this._outer && this._outer._getCfws && this._outer._getCfws();
 }
 
-
-
-
-
-
-
-
-
-
-
 function _createCfwsValidator(options) {
     // Create and return a _CfwsValidator if needed, or return null otherwise 
     if (options.allowComments) {
@@ -202,6 +194,24 @@ function _createCfwsValidator(options) {
         return null;
     }
 }
+
+function _createDomainPart(options) {
+    // Create and return a _CfwsValidator if needed, or return null otherwise 
+    if (options.allowLocalAddresses >= 0) {
+        return new _DomainPart(this, options);
+    } else {
+        return null;
+    }
+}
+
+
+
+
+
+
+
+
+
 
 function _CfwsValidator(outer, options) {
     this._outer = outer;
@@ -344,4 +354,41 @@ function _defineLocalPart() {
     // RFC 5322 local-part = dot-atom / quoted-string / obs-local-part
     // If _obsLocalPart is not defined, _makeAlternatives will deal with it correctly.
     return this._makeAlternatives(this._buildDotAtom(), this._quotedString, this._obsLocalPart);
+}
+
+
+
+
+
+function _DomainPart(outer, options) {
+    this._outer = outer;
+    
+    this._getCfws = _getCfwsFromOuter;
+    
+    this._buildDotAtomText = _buildDomainDotAtomText;
+    
+    this._label = _buildDomainLabel.call(this);
+}
+_DomainPart.prototype = _validatorProto;
+
+function _buildDomainDotAtomText() {
+    // Although RFC 5322 doesn't directly place any restrictions on the dot-atom in the domain,
+    // it must be a valid domain. RFC 5322's "atom" corresponds to "label" from RFC 1035 and RFC 
+    // 1123, and there are restrictions in those RFCs.
+    // This means we can't use the normal atom or dot-atom definition directly here. Instead,
+    // use a dot-separated list of labels
+    
+    return '(' + this._label + String.raw`(\.` + this._label + ')*)';
+    
+}
+
+function _buildDomainLabel() {
+    // Each label may contain dashes, letters, and digits, but cannot start or end with a dash.
+    var internalChar = String.raw`[a-zA-Z0-9\-]`;
+    var startEndChar = String.raw`[a-zA-Z0-9]`;
+    
+    // A label may be up to 63 characters long and cannot be empty. Either a single start/end 
+    // char (for a one-character-long label),  or 0-61 internal characters surrounded by
+    // start/end chars (for more than one character).
+    return '(' + startEndChar + '(' + internalChar + '{0,61}' + startEndChar + ')?)';
 }

@@ -687,6 +687,8 @@ QUnit.test('LocalPart_localAtext_DoesNotMatchInvalidAtext', function (assert) {
 
 
 
+
+
 QUnit.module('EmailValidator_WithOptions_LowLevel')
 
 QUnit.test('EmailValidator_FWSDisallowObsolete_MatchesProperFWS', function (assert) {
@@ -1620,6 +1622,88 @@ QUnit.test('LocalPart_ObsoleteLocalPart_DoesNotMatchInvalid', function (assert) 
     assert.expect(inputs.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.input + '" is an invalid obsolete local part and should fail');
+    })
+});
+
+QUnit.test('DomainPart_domainDotAtom_MatchesValidDotAtom', function (assert) {
+    // Arrange
+    var inputs = [
+        'a',
+        'a.b',
+        'foo.bar.baz',
+        'foo.3bar',
+        '(comment)foo',
+        '((nested) comment)foo.bar ',
+        '\t\n foo.bar.baz\t\n ',
+        'foo.3bar(comment \n comment)',
+        'foo-bar',
+        'foo---bar.baz',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._domainPart._buildDotAtom());
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid dot-atom and should pass');
+    })
+});
+
+QUnit.test('DomainPart_domainDotAtom_DoesNotMatchInvalidDotAtom', function (assert) {
+    // Arrange
+    var inputs = [
+        '',
+        '.a',
+        'a.b.',
+        '.',
+        '-foo',
+        'foo-',
+        'foo.-bar',
+        'foo-.bar',
+        '"foo"',
+        'foo."bar"',
+        '"foo".bar',
+        'foo."bar".baz',
+        'foo"bar"baz',
+        'foo(.3bar',
+        'foo)bar',
+        '<foo',
+        '>foo',
+        'foo[]',
+        'foo bar',
+        'foo\tbar',
+        '\\tfoo',
+        'foo@bar',
+        '(comment)foo\x07bar',
+        'foo\\ bar',
+        '\\\t\\\n.\\ \\\t.foo',
+        'foo\\\x07bar',
+        '(comment)',
+        'foo!bar',
+        'foo#bar',
+        'foo$bar',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._domainPart._buildDotAtom());
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid dot-atom and should fail');
     })
 });
 
