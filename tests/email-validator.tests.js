@@ -1768,6 +1768,7 @@ QUnit.test('DomainPart_domainDotAtom_MatchesValidDotAtom', function (assert) {
         'foo.3bar(comment \n comment)',
         'foo-bar',
         'foo---bar.baz',
+        'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk',
         ];
     var target = new EmailValidator();
     var results = [];
@@ -1821,6 +1822,7 @@ QUnit.test('DomainPart_domainDotAtom_DoesNotMatchInvalidDotAtom', function (asse
         'foo!bar',
         'foo#bar',
         'foo$bar',
+        'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl',
         ];
     var target = new EmailValidator();
     var results = [];
@@ -1916,6 +1918,7 @@ QUnit.test('DomainPart_ObsoleteDomain_MatchesValid', function (assert) {
         'foo---bar.baz',
         'foo(comment).bar',
         'foo.(comment)bar',
+        'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk',
         ];
     var target = new EmailValidator();
     var results = [];
@@ -1967,6 +1970,7 @@ QUnit.test('DomainPart_ObsoleteDomain_DoesNotMatchInvalid', function (assert) {
         'foo!bar',
         'foo#bar',
         'foo$bar',
+        'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl',
         ];
     var target = new EmailValidator();
     var results = [];
@@ -2101,7 +2105,108 @@ QUnit.test('LocalPart_LocalPart_DoesNotMatchInvalid', function (assert) {
     })
 });
 
+QUnit.test('DomainPart_DomainPart_MatchesValid', function (assert) {
+    // Arrange
+    var inputs = [
+        'a',
+        'a.b',
+        'foo.bar.baz',
+        'foo.3bar',
+        '(comment)foo',
+        '((nested) comment)foo.bar ',
+        '\t\n foo.bar.baz\t\n ',
+        'foo.3bar(comment \n comment)',
+        'foo-bar',
+        'foo---bar.baz',
+        'foo(comment).bar',
+        'foo.(comment)bar',
+        '[]',
+        '[127.0.0.1]',
+        '(comment) \n [127.0.0.1]',
+        '[ \n foo\t\n bar \n\t]',
+        '[foo\x07bar]',
+        '[foo)bar]',
+        '[foo"bar]',
+        '[foo\\[bar]',
+        '[foo\\]bar]',
+        '[foo\\\x0Dbar]',
+        '[foo\\\\bar]',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._domainPart.matchString);
 
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid domain and should pass');
+    })
+});
+
+QUnit.test('DomainPart_DomainPart_DoesNotMatchInvalid', function (assert) {
+    // Arrange
+    var inputs = [
+        '',
+        '.a',
+        'a.b.',
+        '.',
+        '-foo',
+        'foo-',
+        'foo.-bar',
+        'foo-.bar',
+        '"foo"',
+        'foo."bar"',
+        '"foo".bar',
+        'foo."bar".baz',
+        'foo"bar"baz',
+        'foo(.3bar',
+        'foo)bar',
+        '<foo',
+        '>foo',
+        'foo[]',
+        'foo bar',
+        'foo\tbar',
+        '\\tfoo',
+        'foo@bar',
+        '(comment)foo\x07bar',
+        'foo\\ bar',
+        '\\\t\\\n.\\ \\\t.foo',
+        'foo\\\x07bar',
+        '(comment)',
+        'foo!bar',
+        'foo#bar',
+        'foo$bar',
+        '[noclosebracket',
+        'noopenbracket]',
+        '(badcomment[foo]',
+        '[bad\nFWS]',
+        '[foo[bar]',
+        '[foo]bar]',
+        '[foo\x0Dbar]',
+        '[foo\\]',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._domainPart.matchString);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid domain and should fail');
+    })
+});
 
 
 
@@ -2183,5 +2288,72 @@ QUnit.test('LocalPart_LocalPartNoSeparateLabels_DoesNotMatchInvalid', function (
     assert.expect(inputs.length);
     results.forEach(function(result) {
         assert.notOk(result.result, '"' + result.input + '" is an invalid local part and should fail');
+    })
+});
+
+
+
+
+
+
+
+
+QUnit.module('EmailValidator_Default_HighestLevel');
+
+QUnit.test('EmailValidator_addrSpec_MatchesValid', function (assert) {
+    // Arrange
+    var inputs = [
+        'a@b',
+        'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstu@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz',
+        '(comment with \n FWS) foo.(comment)"bar".baz@[127.0.0.1] (comment)',
+        'foo@(comment ) \n example (comment) .  \n (comment) com (comment)',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._addrSpec);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is a valid address and should pass');
+    })
+});
+
+QUnit.test('EmailValidator_addrSpec_DoesNotMatchInvalid', function (assert) {
+    // Arrange
+    var inputs = [
+        '',
+        '.a.b@example.com',
+        'a.b.@example.com',
+        '.@example.com',
+        'foo',
+        'foo(bar@example.com',
+        'foo)bar@example.com',
+        '@',
+        'foo@',
+        '@foo',
+        'foo bar@example.com',
+        'foo@127.0.0.1]',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._addrSpec);
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is an invalid address and should fail');
     })
 });

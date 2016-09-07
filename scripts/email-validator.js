@@ -133,6 +133,7 @@ function EmailValidator(options) {
     this._localPart = new _LocalPart(this, this._opts);
     this._defineIfApplicable('_domainPart', _createDomainPart, [this._opts]);
     
+    this._addrSpec = _defineAddrSpec.call(this, this._opts.allowLocalAddresses);
 }
 EmailValidator.prototype = _validatorProto;
 
@@ -176,6 +177,21 @@ function _defineQuotedPair(allowControlChars) {
         return String.raw`(\\[\s\S])`;
     } else {
         return String.raw`(\\` + this._makeAlternatives(this._printable, this._wsp) + ')';
+    }
+}
+
+function _defineAddrSpec(allowLocal) {
+    // 5322 3.4.1: addr-spec = local-part "@" domain
+    // If we allow local addresses, then a local address is ONLY local-part.
+    if (!allowLocal) {
+        // Strict, normal definition
+        return this._localPart.matchString + '@' + this._domainPart.matchString;
+    } else if (allowLocal > 0) {
+        // Local address allowed, domain optional
+        return this._localPart.matchString + '(@' + this._domainPart.matchString + ')?';
+    } else {
+        // Local address required, domain not allowed
+        return this._localPart.matchString;
     }
 }
 
@@ -372,7 +388,9 @@ function _DomainPart(outer, options) {
     
     this._buildDotAtomText = _buildDomainDotAtomText;
     
-    _defineAndBuildObsDomainParts.call(this, options.separateDomainLabels)
+    _defineAndBuildObsDomainParts.call(this, options.separateDomainLabels);
+    
+    this.matchString = _defineDomainPart.call(this);
 }
 _DomainPart.prototype = _validatorProto;
 
@@ -414,6 +432,13 @@ function _defineDomainLiteral() {
     return cfws ?
         this._surroundWithOptional(baseLiteral, cfws) :
         baseLiteral;
+}
+
+function _defineDomainPart() {
+    // RFC 5322 3.4.1: domain = dot-atom / domain-literal / obs-domain
+    // If obsolete is not allowed, _obsDomain will be undefined, and _makeAlternatives will handle
+    // it properly.
+    return this._makeAlternatives(this._buildDotAtom(), this._domainLiteral, this._obsDomain);
 }
 
 function _buildDomainDotAtomText() {
