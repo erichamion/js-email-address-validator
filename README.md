@@ -96,7 +96,6 @@ The rules for a valid email address are surprisingly complex and are scattered t
   - A label in either the local part or the domain part can start and/or end with CFWS.
   - By default, this validator accepts addresses with CFWS. This behavior can be changed with the `allowComments` option.
 - Local Part:
-  - The local part can be up to 64 characters long.
   - Normal label: Normally, the legal characters within a label in the local part of the address include alphanumeric low-ASCII characters and the set {``!#$%&'*+-/=?^_`{|}~``}.
   - Quoted string: An entire label (or an entire local part, but then the local part could be considered a single label) can be surrounded in double-quotes. Inside a quoted string, any printable character, control character, or folding whitespace is valid, with the exception of the backslash and the double-quote. Backslash escapes are also allowed withing a quoted string. Control characters can be disallowed with the `AllowQuotedControlCharacters` option.
   - Backslash Escape: 
@@ -126,7 +125,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
 
 ## Future Plans
 - RFC 5321 places some restrictions on domain literals. Implement those restrictions.
-- RFC 5321 also is more strict on the local part of the address than the rules I followed. Backslash escapes are not allowed in unquoted strings (which I have an option for), a quoted string must be the entire local part (not quoted or unquoted on a label-by-label basis), and I haven't fully reviewed to see if there are other restrictions. Review the RFC and implement these (possibly as options).
+- RFC 5321 also is more strict on the local part of the address than the rules I followed. Backslash escapes are not allowed in unquoted strings (this now matches the default behavior), a quoted string must be the entire local part (available as an option already), and I haven't fully reviewed to see if there are other restrictions. Review the RFC and implement these (possibly as options).
   - (On the other hand, this paragraph in RFC 5321 seems to state that backslash escapes can be used outside of quoted strings):
   
   > Note that the backslash, "\", is a quote character, which is used to
@@ -135,13 +134,11 @@ The rules for a valid email address are surprisingly complex and are scattered t
   >  single nine-character user name string with the comma being the
   >  fourth character of that string.
   
-- Review the RFCs to make sure whitespace and control characters are being handled properly.
 - Review RFC 6531 and related documents to handle high-ASCII and non-ASCII characters.
 - Add additional options. Future options may include:
   - options for handling (or not handling) internationalized addresses with high-ASCII or non-ASCII characters
   - whether to allow addresses that meet the specification's length requirements but are too long to be used
   - whether to disallow certain things that are legal but discouraged (such as domain literals)
-  - options to disallow addresses that RFC 5322 considers obsolete
 
 
 #### Notes for RFC 5321 compatibility
@@ -154,6 +151,7 @@ The rules for a valid email address are surprisingly complex and are scattered t
    - IPv4 literal: [127.0.0.1]
    - IPv6 literal or general address literal: Inside the brackets, must contain a tag, followed by ':', folowed by other content. The other content cannot be empty and must be printable characters (excluding [, \, and ]).
 - There is no mention of backslash escapes in domain literals. (could be added)
+- Local part is limited 
 
 #### Notes after reviewing RFC 5322 in more detail
 - Printing characters are 0x21-0x7E (!-~)
@@ -166,3 +164,4 @@ The rules for a valid email address are surprisingly complex and are scattered t
 - Comments/FWS between period-separated elements of local-part and domain are allowed but obsolete. -- separateLocalLabels option implements this
 - Quoted-pair can have non-WS control characters, but this is obsolete.
 - Quoted-pair does not seem to be allowed outside of comment and quoted-string (and obsolete in domain literal)
+- RFC 5322 does NOT limit the length of the local part (or of the domain part, but a hostname length is limited elsewhere)
