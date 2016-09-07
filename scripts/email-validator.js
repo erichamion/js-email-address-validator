@@ -296,9 +296,9 @@ function _defineLocalAtext(allowEscapes) {
 function _defineQtext(allowControlChars) {
     // RFC 5322 3.2.4: qtext = %d33 / %d35-91 / %d93-126 / obs-qtext
     // RFC 5322 4.1: obs-qtext = obs-NO-WS-CTL
-    // With obsolete syntax, this means all low-ASCII characters except null, whitespace, backslash
-    // and double-quote. Without obsolete syntax, all printable low-ASCII characters except
-    // backslash and double-quote
+    // With obsolete syntax, this means all low-ASCII characters except null, whitespace characters (not
+    // just strictly WSP), backslash and double-quote. Without obsolete syntax, all printable low-ASCII
+    // characters except backslash and double-quote
     var base;
     var toSubtract;
     if (allowControlChars) {
@@ -365,11 +365,28 @@ function _DomainPart(outer, options) {
     
     this._getCfws = _getCfwsFromOuter;
     
+    this._label = _buildDomainLabel.call(this);
+    this._dtext = _defineDtext.call(this, options.allowDomainLiteralEscapes);
+    
     this._buildDotAtomText = _buildDomainDotAtomText;
     
-    this._label = _buildDomainLabel.call(this);
 }
 _DomainPart.prototype = _validatorProto;
+
+function _defineDtext(allowEscapes) {
+    // RFC 5322 3.4.1: dtext = %d33-90 / %d94-126 / obs-dtext
+    // If obs-dtext is not allowed, this is equivalent to the printable low-ASCII
+    // characters excluding square brackets and backslash.
+    var baseDtext = this._subtractMatch(this._printable, String.raw`[\[\]\\]`);
+    
+    // RFC 5322 4.4: obs-dtext = obs-NO-WS-CTL / quoted-pair
+    // With obs-dtext, dtext includes all low-ASCII characters except for null, whitespace characters
+    // (not just strictly WSP), square brackets, and backslash. It also includes backslash-escapes 
+    // (quoted-pair).
+    return allowEscapes ?
+        this._makeAlternatives(baseDtext, this._outer._obsNoWsCtl, this._outer._quotedPair) :
+        baseDtext;
+}
 
 function _buildDomainDotAtomText() {
     // Although RFC 5322 doesn't directly place any restrictions on the dot-atom in the domain,
@@ -392,3 +409,4 @@ function _buildDomainLabel() {
     // start/end chars (for more than one character).
     return '(' + startEndChar + '(' + internalChar + '{0,61}' + startEndChar + ')?)';
 }
+

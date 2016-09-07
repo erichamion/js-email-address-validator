@@ -677,7 +677,69 @@ QUnit.test('LocalPart_localAtext_DoesNotMatchInvalidAtext', function (assert) {
     })
 });
 
+QUnit.test('DomainPart_dtext_MatchesValidDtext', function (assert) {
+    // Arrange
+    var inputs = [
+        'q',
+        '!',
+        '~',
+        '<',
+        '^',
+        '"',
+        '\x03',
+        '\x7F',
+        '\\ ',
+        '\\\n',
+        '\\[',
+        '\\]',
+        '\\\\',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._domainPart._dtext)
 
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is valid dtext and should pass');
+    })
+});
+
+QUnit.test('DomainPart_dtext_DoesNotMatchInvalidDtext', function (assert) {
+    // Arrange
+    var inputs = [
+        'qq',
+        '\\',
+        '[',
+        ']',
+        '\0',
+        ' ',
+        '\t',
+        '\n',
+        '\x0D',
+        ];
+    var target = new EmailValidator();
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._domainPart._dtext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is invalid dtext and should fail');
+    })
+});
 
 
 
@@ -939,6 +1001,74 @@ QUnit.test('LocalPart_localAtextAllowBareEscapes_MatchesValidAtextAndQuotedPair'
         assert.ok(result.result, '"' + result.input + '" is atext and should pass');
     })
 });
+
+QUnit.test('DomainPart_dtextDisallowDomainLiteralEscapes_MatchesValidDtext', function (assert) {
+    // Arrange
+    var inputs = [
+        'q',
+        '!',
+        '~',
+        '<',
+        '^',
+        '"',
+        ];
+    var options = { allowDomainLiteralEscapes: false };
+    var target = new EmailValidator(options);
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._domainPart._dtext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.ok(result.result, '"' + result.input + '" is valid dtext and should pass');
+    })
+});
+
+QUnit.test('DomainPart_dtextDisallowDomainLiteralEscapes_DoesNotMatchInvalidDtext', function (assert) {
+    // Arrange
+    var inputs = [
+        'qq',
+        '\\',
+        '[',
+        ']',
+        '\0',
+        ' ',
+        '\t',
+        '\n',
+        '\x0D',
+        '\x03',
+        '\x7F',
+        '\\ ',
+        '\\\n',
+        '\\[',
+        '\\]',
+        '\\\\',
+        ];
+    var options = { allowDomainLiteralEscapes: false };
+    var target = new EmailValidator(options);
+    var results = [];
+    var resultRe = makeAnchoredRegex(target._domainPart._dtext)
+
+    // Act
+    
+    inputs.forEach(function(input) {
+        results.push({input:input, result:resultRe.test(input)});
+    }); 
+
+    // Assert
+    assert.expect(inputs.length);
+    results.forEach(function(result) {
+        assert.notOk(result.result, '"' + result.input + '" is invalid dtext and should fail');
+    })
+});
+
+
 
 
 
