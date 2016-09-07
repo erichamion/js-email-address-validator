@@ -45,6 +45,7 @@ var _validatorProto = {
             allowBareEscapes: this._coalesce(opts.allowBareEscapes, false),
             allowQuotedControlCharacters: this._coalesce(opts.allowQuotedControlCharacters, true),
             separateLocalLabels: this._coalesce(opts.separateLocalLabels, true),
+            separateDomainLabels: this._coalesce(opts.separateDomainLabels, true),
             allowLocalAddresses: this._coalesce(opts.allowLocalAddresses, 0),
         }
         
@@ -365,14 +366,26 @@ function _DomainPart(outer, options) {
     
     this._getCfws = _getCfwsFromOuter;
     
-    this._label = _buildDomainLabel.call(this);
+    this._label = _defineDomainLabel.call(this);
     this._dtext = _defineDtext.call(this, options.allowDomainLiteralEscapes);
     this._domainLiteral = _defineDomainLiteral.call(this);
     
     this._buildDotAtomText = _buildDomainDotAtomText;
     
+    _defineAndBuildObsDomainParts.call(this, options.separateDomainLabels)
 }
 _DomainPart.prototype = _validatorProto;
+
+function _defineDomainLabel() {
+    // Each label may contain dashes, letters, and digits, but cannot start or end with a dash.
+    var internalChar = String.raw`[a-zA-Z0-9\-]`;
+    var startEndChar = String.raw`[a-zA-Z0-9]`;
+    
+    // A label may be up to 63 characters long and cannot be empty. Either a single start/end 
+    // char (for a one-character-long label),  or 0-61 internal characters surrounded by
+    // start/end chars (for more than one character).
+    return '(' + startEndChar + '(' + internalChar + '{0,61}' + startEndChar + ')?)';
+}
 
 function _defineDtext(allowEscapes) {
     // RFC 5322 3.4.1: dtext = %d33-90 / %d94-126 / obs-dtext
@@ -414,14 +427,22 @@ function _buildDomainDotAtomText() {
     
 }
 
-function _buildDomainLabel() {
-    // Each label may contain dashes, letters, and digits, but cannot start or end with a dash.
-    var internalChar = String.raw`[a-zA-Z0-9\-]`;
-    var startEndChar = String.raw`[a-zA-Z0-9]`;
+function _defineAndBuildObsDomainParts(canHaveObsoletePart) {
+    if (!canHaveObsoletePart) return;
     
-    // A label may be up to 63 characters long and cannot be empty. Either a single start/end 
-    // char (for a one-character-long label),  or 0-61 internal characters surrounded by
-    // start/end chars (for more than one character).
-    return '(' + startEndChar + '(' + internalChar + '{0,61}' + startEndChar + ')?)';
+    this._buildAtom = _buildObsDomainAtom;
+    this._obsDomain = _defineObsDomain.call(this);
 }
 
+function _buildObsDomainAtom() {
+    // As with dot-atom, we can't use the direct definition of atom here because of external restrictions
+    // (not in RFC 5322) on domain names. Rather than simply atext surrounded by optional CWFS, an atom here
+    // must be a label surrounded by optional CFWS.
+    return this._surroundWithOptional(this._label, this._getCfws());
+}
+
+function _defineObsDomain() {
+    // RFC 5322 4.4: obs-domain = atom *("." atom)
+    // A dot-separated list of at least one atom
+    return '(' + this._buildAtom() + String.raw`(\.` + this._buildAtom() + ')*)';
+}
